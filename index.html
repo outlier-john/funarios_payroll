@@ -124,10 +124,9 @@
   </header>
 
   <div class="card" id="sourceCard">
-    <h2 class="section-title">Data source</h2>
+    <h2 class="section-title">Data source &mdash; Schedule (read)</h2>
     <p style="font-size:13px;color:var(--muted);margin:0 0 12px;line-height:1.6;">
-      Paste the published-CSV link for the Schedule tab (Google Sheets: <b style="color:var(--cream)">File &rarr; Share &rarr; Publish to web</b>,
-      select the Schedule sheet, format CSV, copy the link). The dashboard will auto-pull from it every time this page loads.
+      Published-CSV link for the <b style="color:var(--cream)">Schedule</b> tab (File &rarr; Share &rarr; Publish to web &rarr; pick Schedule &rarr; format CSV).
     </p>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <input id="sheetUrl" type="text" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv"
@@ -141,8 +140,30 @@
     </div>
   </div>
 
+  <div class="card" id="attendanceSourceCard">
+    <h2 class="section-title">Data source &mdash; Attendance (read + write)</h2>
+    <p style="font-size:13px;color:var(--muted);margin:0 0 12px;line-height:1.6;">
+      Two links needed here: the published-CSV link for <b style="color:var(--cream)">Attendance_Log</b> (so the dashboard sees
+      statuses marked directly in the Sheet), and the Apps Script Web App URL + secret (so marking attendance here writes back into
+      the Sheet too). See the setup guide for how to create these.
+    </p>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <input id="attendanceUrl" type="text" placeholder="Attendance_Log published CSV link"
+        style="background:var(--panel-2);border:1px solid var(--line);color:var(--cream);border-radius:5px;padding:9px 12px;font-size:13px;font-family:'IBM Plex Mono',monospace;">
+      <input id="scriptUrl" type="text" placeholder="Apps Script Web App URL (ends in /exec)"
+        style="background:var(--panel-2);border:1px solid var(--line);color:var(--cream);border-radius:5px;padding:9px 12px;font-size:13px;font-family:'IBM Plex Mono',monospace;">
+      <input id="scriptSecret" type="text" placeholder="Sync secret (must match the one in the Apps Script)"
+        style="background:var(--panel-2);border:1px solid var(--line);color:var(--cream);border-radius:5px;padding:9px 12px;font-size:13px;font-family:'IBM Plex Mono',monospace;">
+    </div>
+    <div style="margin-top:10px;">
+      <button class="btn small" onclick="saveSyncConfig()">Save sync settings</button>
+    </div>
+    <div id="attendanceSyncStatus" style="font-size:12px;color:var(--muted);margin-top:10px;"></div>
+  </div>
+
   <div id="emptyState" class="card empty-state">
     <div class="display">No schedule loaded yet</div>
+
     <p>Paste your published Schedule link above, or import a CSV (Date, Person Name, Role) to start marking attendance and see payroll totals.</p>
   </div>
 
@@ -326,9 +347,18 @@ document.getElementById('fileInput').addEventListener('change', function(e){
 });
 
 let sheetUrl = localStorage.getItem('funarios_sheetUrl') || '';
+let attendanceUrl = localStorage.getItem('funarios_attendanceUrl') || '';
+let scriptUrl = localStorage.getItem('funarios_scriptUrl') || '';
+let scriptSecret = localStorage.getItem('funarios_scriptSecret') || '';
 
 function setSyncStatus(msg, isError){
   const el = document.getElementById('syncStatus');
+  el.textContent = msg;
+  el.style.color = isError ? 'var(--red)' : 'var(--muted)';
+}
+
+function setAttendanceSyncStatus(msg, isError){
+  const el = document.getElementById('attendanceSyncStatus');
   el.textContent = msg;
   el.style.color = isError ? 'var(--red)' : 'var(--muted)';
 }
@@ -363,10 +393,99 @@ function fetchFromUrl(manual){
     });
 }
 
+function saveSyncConfig(){
+  attendanceUrl = document.getElementById('attendanceUrl').value.trim();
+  scriptUrl = document.getElementById('scriptUrl').value.trim();
+  scriptSecret = document.getElementById('scriptSecret').value.trim();
+  localStorage.setItem('funarios_attendanceUrl', attendanceUrl);
+  localStorage.setItem('funarios_scriptUrl', scriptUrl);
+  localStorage.setItem('funarios_scriptSecret', scriptSecret);
+  setAttendanceSyncStatus('Saved. Pulling current attendance from the Sheet\u2026');
+  fetchAttendanceFromUrl(true);
+}
+
+const STATUS_TEXT_TO_CODE = { 'full day':'full', 'partial day':'partial', 'no show':'no' };
+
+function detectAttendanceColumns(fields, rows){
+  const norm = f => (f || '').toLowerCase().trim();
+  const find = (keywords, avoid) => {
+    for(const f of fields){
+      const n = norm(f);
+      if(avoid && avoid.some(a => n.includes(a))) continue;
+      if(keywords.some(k => n.includes(k))) return f;
+    }
+    return null;
+  };
+  let dateCol = find(['date']);
+  const nameCol = find(['person name','full name','talent','actor','cast','name'], ['username']);
+  const roleCol = find(['role','position','character','job']);
+  const statusCol = find(['status']);
+  const partialCol = find(['partial']);
+  if(!dateCol && rows && rows.length) dateCol = looksLikeDateColumn(fields, rows);
+  return { dateCol, nameCol, roleCol, statusCol, partialCol };
+}
+
+function fetchAttendanceFromUrl(manual){
+  if(!attendanceUrl){ if(manual) setAttendanceSyncStatus('No Attendance_Log link saved yet.', true); return; }
+  setAttendanceSyncStatus('Syncing\u2026');
+  fetch(attendanceUrl)
+    .then(res => { if(!res.ok) throw new Error('Server returned ' + res.status); return res.text(); })
+    .then(text => {
+      const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+      const cols = detectAttendanceColumns(parsed.meta.fields, parsed.data);
+      if(!cols.dateCol || !cols.nameCol || !cols.roleCol || !cols.statusCol){
+        setAttendanceSyncStatus(`Couldn't find the right columns. Found: ${(parsed.meta.fields||[]).join(', ')}`, true);
+        return;
+      }
+      let updated = 0;
+      parsed.data.forEach(row => {
+        const name = (row[cols.nameCol] || '').trim();
+        const role = (row[cols.roleCol] || '').trim();
+        const date = parseDateFlexible(row[cols.dateCol]);
+        if(!name || !role || !date) return;
+        const statusRaw = (row[cols.statusCol] || '').trim().toLowerCase();
+        const code = STATUS_TEXT_TO_CODE[statusRaw];
+        if(!code) return;
+        const key = rowKey(date, name, role);
+        const partialAmt = cols.partialCol ? (Number(row[cols.partialCol]) || 0) : 0;
+        attendance[key] = { status: code, partialAmt };
+        updated++;
+      });
+      save();
+      renderAll();
+      const now = new Date().toLocaleString();
+      setAttendanceSyncStatus(`Last synced ${now} \u2014 ${updated} attendance record${updated===1?'':'s'} pulled from the Sheet.`);
+    })
+    .catch(err => {
+      setAttendanceSyncStatus('Sync failed: ' + err.message, true);
+    });
+}
+
+function pushAttendanceUpdate(r, status, partialAmt){
+  if(!scriptUrl || !scriptSecret){
+    setAttendanceSyncStatus('Marked locally only \u2014 add the Apps Script URL and secret above to also write this into the Sheet.', true);
+    return;
+  }
+  fetch(scriptUrl, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ date: r.date, name: r.name, role: r.role, status, partialAmt, secret: scriptSecret })
+  }).then(() => {
+    setAttendanceSyncStatus('Sent to Sheet. (Apps Script responses can\'t be read from here, so double-check the Sheet if unsure it landed.)');
+  }).catch(err => {
+    setAttendanceSyncStatus('Could not reach the Apps Script URL: ' + err.message, true);
+  });
+}
+
 if(sheetUrl){
   document.getElementById('sheetUrl').value = sheetUrl;
   fetchFromUrl(false);
 }
+if(attendanceUrl){ document.getElementById('attendanceUrl').value = attendanceUrl; }
+if(scriptUrl){ document.getElementById('scriptUrl').value = scriptUrl; }
+if(scriptSecret){ document.getElementById('scriptSecret').value = scriptSecret; }
+if(attendanceUrl){ fetchAttendanceFromUrl(false); }
 
 function getRate(name, role){
   const override = peopleRates.find(p => p.name === name && p.role === role && p.active !== false);
@@ -494,9 +613,9 @@ function renderAttendance(data){
             <div class="att-row">
               <span class="att-who">${r.name}<span class="role">${r.role}</span></span>
               <div class="att-actions">
-                <button class="status-btn full ${att.status==='full'?'on':''}" onclick="setStatus('${r.key}','full')">Full Day</button>
-                <button class="status-btn partial ${att.status==='partial'?'on':''}" onclick="setStatus('${r.key}','partial')">Partial</button>
-                <button class="status-btn no ${att.status==='no'?'on':''}" onclick="setStatus('${r.key}','no')">No Show</button>
+                <button class="status-btn full ${att.status==='full'?'on':''}" onclick="setStatus('${r.key}','${r.date}','${r.name.replace(/'/g,"\\'")}','${r.role.replace(/'/g,"\\'")}','full')">Full Day</button>
+                <button class="status-btn partial ${att.status==='partial'?'on':''}" onclick="setStatus('${r.key}','${r.date}','${r.name.replace(/'/g,"\\'")}','${r.role.replace(/'/g,"\\'")}','partial')">Partial</button>
+                <button class="status-btn no ${att.status==='no'?'on':''}" onclick="setStatus('${r.key}','${r.date}','${r.name.replace(/'/g,"\\'")}','${r.role.replace(/'/g,"\\'")}','no')">No Show</button>
               </div>
             </div>
           `;
@@ -506,17 +625,18 @@ function renderAttendance(data){
   }).join('');
 }
 
-function setStatus(key, status){
+function setStatus(key, date, name, role, status){
   const current = attendance[key] || {};
+  let partialAmt = current.partialAmt || 0;
   if(status === 'partial' && current.status !== 'partial'){
     const amt = prompt('Partial day amount owed ($):', '0');
     if(amt === null) return;
-    attendance[key] = { status: 'partial', partialAmt: Number(amt) || 0 };
-  } else {
-    attendance[key] = { status, partialAmt: current.partialAmt || 0 };
+    partialAmt = Number(amt) || 0;
   }
+  attendance[key] = { status, partialAmt };
   save();
   renderAll();
+  pushAttendanceUpdate({ date, name, role }, status, partialAmt);
 }
 
 function renderLedger(data){
