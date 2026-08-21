@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FUNarios — Payroll</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+  :root{
+    --bg:#0B0A08;
+    --panel:#151310;
+    --panel-2:#1C1914;
+    --line:#2E2A22;
+    --gold:#D4AF37;
+    --gold-dim:#8A6F24;
+    --rust:#B4331F;
+    --cream:#F1EDE4;
+    --muted:#8A8378;
+    --green:#6B8F5A;
+    --red:#C2493A;
+    --outlier-orange:#FB5331;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--cream);font-family:'Inter',sans-serif;padding:32px 24px 80px;}
+  .wrap{max-width:960px;margin:0 auto;}
+  .display{font-family:'Bebas Neue',sans-serif;letter-spacing:0.03em;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  h2.section-title{font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin:0 0 14px;font-weight:500;}
+  button{font-family:'Inter',sans-serif;cursor:pointer;}
+
+  header{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:24px;flex-wrap:wrap;gap:16px;}
+  .brand{display:flex;align-items:baseline;gap:12px;}
+  .brand h1{font-size:38px;margin:0;color:var(--gold);line-height:1;}
+  .brand .tag{background:var(--rust);color:var(--cream);font-size:11px;letter-spacing:0.12em;text-transform:uppercase;padding:4px 8px;border-radius:2px;}
+  .by-line{font-size:11px;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;display:flex;align-items:center;gap:6px;}
+  .by-line img{height:16px;width:16px;object-fit:contain;}
+  .by-line b{color:var(--outlier-orange);}
+
+  .footer-brand{display:flex;align-items:center;gap:8px;margin-top:14px;}
+  .footer-brand img{height:22px;width:22px;object-fit:contain;}
+  .footer-brand span{font-size:11px;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;}
+  .footer-brand b{color:var(--outlier-orange);}
+
+  .month-toggle{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden;}
+  .month-toggle button{background:transparent;border:none;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:13px;padding:9px 14px;transition:background .15s,color .15s;}
+  .month-toggle button.active{background:var(--gold);color:#1A1508;font-weight:600;}
+  .month-toggle button:not(.active):hover{color:var(--cream);}
+  .month-toggle .empty{padding:9px 14px;color:var(--muted);font-size:12px;}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:24px;margin-bottom:20px;}
+
+  .empty-state{text-align:center;padding:48px 24px;}
+  .empty-state .display{font-size:32px;color:var(--gold);margin-bottom:8px;}
+  .empty-state p{color:var(--muted);font-size:14px;max-width:420px;margin:0 auto 20px;line-height:1.6;}
+
+  .btn{background:var(--gold);color:#1A1508;border:none;padding:11px 20px;border-radius:5px;font-weight:600;font-size:13px;}
+  .btn:hover{background:#E3C158;}
+  .btn.secondary{background:transparent;border:1px solid var(--line);color:var(--cream);}
+  .btn.secondary:hover{border-color:var(--gold-dim);}
+  .btn.small{padding:6px 12px;font-size:12px;}
+  .btn:disabled{opacity:0.4;cursor:not-allowed;}
+
+  input[type=file]{display:none;}
+
+  .hero{position:relative;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px;}
+  .hero-label{font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+  .hero-total{font-size:60px;color:var(--gold);line-height:1;}
+  .hero-sub{color:var(--muted);font-size:13px;margin-top:8px;}
+  .stamp{border:2px solid var(--green);color:var(--green);font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:0.1em;padding:7px 16px;border-radius:4px;transform:rotate(-6deg);opacity:0.9;white-space:nowrap;}
+  .stamp.warn{border-color:var(--red);color:var(--red);}
+  .stamp .sub{display:block;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.08em;margin-top:2px;}
+
+  .chart-holder{position:relative;height:240px;}
+
+  .ledger-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);}
+  .ledger-row:last-child{border-bottom:none;}
+  .ledger-name{font-size:14px;}
+  .ledger-name .zero{color:var(--muted);font-size:11px;margin-left:8px;}
+  .ledger-amt{font-size:15px;font-weight:600;}
+  .ledger-amt.zero{color:var(--muted);font-weight:400;}
+
+  .day-group{border:1px solid var(--line);border-radius:6px;margin-bottom:12px;overflow:hidden;}
+  .day-head{background:var(--panel-2);padding:10px 16px;font-size:13px;display:flex;justify-content:space-between;align-items:center;}
+  .day-head .date{font-family:'IBM Plex Mono',monospace;color:var(--gold);}
+  .day-head .count{color:var(--muted);font-size:12px;}
+  .att-row{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-top:1px solid var(--line);flex-wrap:wrap;gap:8px;}
+  .att-who{font-size:13px;}
+  .att-who .role{color:var(--muted);font-size:11px;margin-left:6px;}
+  .att-actions{display:flex;gap:6px;}
+  .status-btn{border:1px solid var(--line);background:transparent;color:var(--muted);font-size:11px;padding:5px 10px;border-radius:4px;}
+  .status-btn.full.on{background:var(--green);border-color:var(--green);color:#0B0A08;font-weight:600;}
+  .status-btn.partial.on{background:#A6822F;border-color:#A6822F;color:#0B0A08;font-weight:600;}
+  .status-btn.no.on{background:var(--red);border-color:var(--red);color:#0B0A08;font-weight:600;}
+
+  .attention-row{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border:1px solid var(--red);border-radius:5px;margin-bottom:8px;background:rgba(194,73,58,0.08);}
+  .attention-row .msg{font-size:12px;color:var(--red);}
+
+  table.rates{width:100%;border-collapse:collapse;font-size:13px;}
+  table.rates th{text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;padding:6px 8px;border-bottom:1px solid var(--line);}
+  table.rates td{padding:6px 8px;border-bottom:1px solid var(--line);}
+  table.rates input{background:var(--panel-2);border:1px solid var(--line);color:var(--cream);border-radius:4px;padding:5px 8px;font-size:13px;width:100%;font-family:'IBM Plex Mono',monospace;}
+
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;}
+
+  footer{margin-top:8px;font-size:12px;color:var(--muted);line-height:1.6;}
+  footer b{color:var(--cream);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <div class="brand">
+        <h1 class="display">FUNARIOS</h1>
+        <span class="tag">Payroll</span>
+      </div>
+      <div class="by-line"><img src="outlier-mgmt-logo.png" alt=""> Built by <b>Outlier MGMT</b></div>
+    </div>
+    <div class="month-toggle" id="monthToggle"><span class="empty">Import a schedule to get started</span></div>
+  </header>
+
+  <div class="card" id="sourceCard">
+    <h2 class="section-title">Data source</h2>
+    <p style="font-size:13px;color:var(--muted);margin:0 0 12px;line-height:1.6;">
+      Paste the published-CSV link for the Schedule tab (Google Sheets: <b style="color:var(--cream)">File &rarr; Share &rarr; Publish to web</b>,
+      select the Schedule sheet, format CSV, copy the link). The dashboard will auto-pull from it every time this page loads.
+    </p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <input id="sheetUrl" type="text" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv"
+        style="flex:1;min-width:240px;background:var(--panel-2);border:1px solid var(--line);color:var(--cream);border-radius:5px;padding:9px 12px;font-size:13px;font-family:'IBM Plex Mono',monospace;">
+      <button class="btn small" onclick="saveAndFetchUrl()">Save &amp; sync</button>
+      <button class="btn secondary small" onclick="fetchFromUrl(true)">Refresh now</button>
+    </div>
+    <div id="syncStatus" style="font-size:12px;color:var(--muted);margin-top:10px;"></div>
+    <div style="margin-top:12px;">
+      <button class="btn secondary small" onclick="document.getElementById('fileInput').click()">Or import a CSV file instead</button>
+    </div>
+  </div>
+
+  <div id="emptyState" class="card empty-state">
+    <div class="display">No schedule loaded yet</div>
+    <p>Paste your published Schedule link above, or import a CSV (Date, Person Name, Role) to start marking attendance and see payroll totals.</p>
+  </div>
+
+  <div id="mainContent" style="display:none;">
+
+    <div class="card hero" id="heroCard"></div>
+
+    <div class="card">
+      <h2 class="section-title">Top earners this month</h2>
+      <div class="chart-holder"><canvas id="earnersChart"></canvas></div>
+    </div>
+
+    <div class="card" id="attentionCard" style="display:none;">
+      <h2 class="section-title">Needs attention</h2>
+      <div id="attentionBody"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title">Mark attendance</h2>
+      <div id="attendanceBody"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title">Full ledger — one row per person</h2>
+      <div id="ledgerBody"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title">Role rates</h2>
+      <table class="rates" id="roleRatesTable"></table>
+      <h2 class="section-title" style="margin-top:20px;">Person overrides (editors, custom rates)</h2>
+      <table class="rates" id="peopleRatesTable"></table>
+      <div class="toolbar">
+        <button class="btn secondary small" onclick="addPersonRateRow()">Add person rate</button>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <button class="btn secondary" onclick="fetchFromUrl(true)">Sync from Google Sheets now</button>
+      <button class="btn secondary" onclick="document.getElementById('fileInput').click()">Import a CSV file</button>
+      <button class="btn secondary" onclick="exportBackup()">Download backup (JSON)</button>
+      <button class="btn secondary" onclick="exportPayrollCSV()">Export this month's payroll (CSV)</button>
+    </div>
+
+  </div>
+
+  <input type="file" id="fileInput" accept=".csv">
+
+  <footer>
+    Attendance and rates are saved in this browser only (not synced across devices) &mdash; use
+    <b>Download backup</b> regularly so you don't lose marked attendance if you clear your browser or switch computers.
+    <div class="footer-brand"><img src="outlier-mgmt-logo.png" alt=""><span>Built and maintained by <b>Outlier MGMT</b></span></div>
+  </footer>
+
+</div>
+
+<script>
+const DEFAULT_ROLE_RATES = {
+  "Lead Actor": 150,
+  "Supporting Actor": 125,
+  "Small Role/Extra": 100,
+  "Camera man": 200,
+  "Audio": 150
+};
+
+let schedule = JSON.parse(localStorage.getItem('funarios_schedule') || '[]');
+let attendance = JSON.parse(localStorage.getItem('funarios_attendance') || '{}');
+let roleRates = JSON.parse(localStorage.getItem('funarios_roleRates') || JSON.stringify(DEFAULT_ROLE_RATES));
+let peopleRates = JSON.parse(localStorage.getItem('funarios_peopleRates') || '[]');
+let selectedMonth = localStorage.getItem('funarios_selectedMonth') || null;
+
+function save(){
+  localStorage.setItem('funarios_schedule', JSON.stringify(schedule));
+  localStorage.setItem('funarios_attendance', JSON.stringify(attendance));
+  localStorage.setItem('funarios_roleRates', JSON.stringify(roleRates));
+  localStorage.setItem('funarios_peopleRates', JSON.stringify(peopleRates));
+  if(selectedMonth) localStorage.setItem('funarios_selectedMonth', selectedMonth);
+}
+
+function rowKey(date, name, role){ return date + '|' + name + '|' + role; }
+
+function monthLabel(dateStr){
+  const d = new Date(dateStr + 'T00:00:00');
+  if(isNaN(d)) return null;
+  return d.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+}
+
+function parseDateFlexible(raw){
+  raw = (raw || '').trim();
+  if(!raw) return null;
+  let m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(m) return `${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;
+  m = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if(m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  m = raw.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if(m) return `${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;
+  m = raw.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  if(m) return `${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;
+  const parsed = new Date(raw);
+  if(!isNaN(parsed) && parsed.getFullYear() > 1970){
+    return `${parsed.getFullYear()}-${String(parsed.getMonth()+1).padStart(2,'0')}-${String(parsed.getDate()).padStart(2,'0')}`;
+  }
+  return null;
+}
+
+function looksLikeDateColumn(fields, sampleRows){
+  const scores = {};
+  fields.forEach(f => { scores[f] = 0; });
+  const sample = sampleRows.slice(0, 15);
+  fields.forEach(f => {
+    let hits = 0;
+    sample.forEach(row => { if(parseDateFlexible(row[f])) hits++; });
+    scores[f] = hits;
+  });
+  let best = null, bestScore = 0;
+  fields.forEach(f => { if(scores[f] > bestScore){ bestScore = scores[f]; best = f; } });
+  return bestScore >= Math.max(2, Math.floor(sample.length * 0.5)) ? best : null;
+}
+
+function detectColumns(fields, rows){
+  const norm = f => (f || '').toLowerCase().trim();
+  const find = (keywords, avoid) => {
+    let best = null;
+    for(const f of fields){
+      const n = norm(f);
+      if(avoid && avoid.some(a => n.includes(a))) continue;
+      if(keywords.some(k => n.includes(k))){ best = f; break; }
+    }
+    return best;
+  };
+  let dateCol = find(['date']);
+  const nameCol = find(['person name','full name','talent','actor','cast','name'], ['username']);
+  const roleCol = find(['role','position','character','job']);
+  if(!dateCol && rows && rows.length){
+    dateCol = looksLikeDateColumn(fields, rows);
+  }
+  return { dateCol, nameCol, roleCol };
+}
+
+function mergeScheduleRows(rows, fields){
+  const cols = detectColumns(fields || Object.keys(rows[0] || {}), rows);
+  if(!cols.dateCol || !cols.nameCol || !cols.roleCol){
+    return { added:0, skipped:0, badDates:0, error:
+      `Couldn't find the right columns in this file. Looking for something with "date" in it, ` +
+      `something with "name" in it, and something with "role" in it. Found columns: ${(fields||[]).join(', ') || 'none'}.`
+    };
+  }
+  let added = 0, skipped = 0, badDates = 0;
+  rows.forEach(row => {
+    const name = (row[cols.nameCol] || '').trim();
+    const role = (row[cols.roleCol] || '').trim();
+    if(!name || !role) return;
+    const date = parseDateFlexible(row[cols.dateCol]);
+    if(!date){ badDates++; return; }
+    const key = rowKey(date, name, role);
+    if(schedule.find(r => r.key === key)){ skipped++; return; }
+    schedule.push({ key, date, name, role });
+    added++;
+  });
+  return { added, skipped, badDates, cols };
+}
+
+document.getElementById('fileInput').addEventListener('change', function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    complete: function(results){
+      const r = mergeScheduleRows(results.data, results.meta.fields);
+      if(r.error){ alert(r.error); e.target.value = ''; return; }
+      save();
+      renderAll();
+      alert(`Imported: ${r.added} new rows added, ${r.skipped} already existed, ${r.badDates} had unreadable dates.`);
+      e.target.value = '';
+    },
+    error: function(err){
+      alert('Could not read that file: ' + err.message);
+    }
+  });
+});
+
+let sheetUrl = localStorage.getItem('funarios_sheetUrl') || '';
+
+function setSyncStatus(msg, isError){
+  const el = document.getElementById('syncStatus');
+  el.textContent = msg;
+  el.style.color = isError ? 'var(--red)' : 'var(--muted)';
+}
+
+function saveAndFetchUrl(){
+  const val = document.getElementById('sheetUrl').value.trim();
+  if(!val){ setSyncStatus('Paste a published CSV link first.', true); return; }
+  sheetUrl = val;
+  localStorage.setItem('funarios_sheetUrl', sheetUrl);
+  fetchFromUrl(true);
+}
+
+function fetchFromUrl(manual){
+  if(!sheetUrl){ if(manual) setSyncStatus('No link saved yet.', true); return; }
+  setSyncStatus('Syncing\u2026');
+  fetch(sheetUrl)
+    .then(res => {
+      if(!res.ok) throw new Error('Server returned ' + res.status);
+      return res.text();
+    })
+    .then(text => {
+      const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+      const r = mergeScheduleRows(parsed.data, parsed.meta.fields);
+      if(r.error){ setSyncStatus(r.error, true); return; }
+      save();
+      renderAll();
+      const now = new Date().toLocaleString();
+      setSyncStatus(`Last synced ${now} \u2014 ${r.added} new row${r.added===1?'':'s'} added, ${r.skipped} already had data.`);
+    })
+    .catch(err => {
+      setSyncStatus('Sync failed: ' + err.message + '. Check the link is published as CSV and try again.', true);
+    });
+}
+
+if(sheetUrl){
+  document.getElementById('sheetUrl').value = sheetUrl;
+  fetchFromUrl(false);
+}
+
+function getRate(name, role){
+  const override = peopleRates.find(p => p.name === name && p.role === role && p.active !== false);
+  if(override) return override.rate;
+  if(roleRates.hasOwnProperty(role)) return roleRates[role];
+  return null;
+}
+
+function getAllMonths(){
+  const months = new Set();
+  schedule.forEach(r => { const m = monthLabel(r.date); if(m) months.add(m); });
+  return [...months].sort((a,b) => new Date(a) - new Date(b));
+}
+
+function computeForMonth(month){
+  const rows = schedule.filter(r => monthLabel(r.date) === month);
+  const perPerson = {};
+  const perPersonRole = [];
+  const flagged = [];
+  rows.forEach(r => {
+    const att = attendance[r.key] || { status: null, partialAmt: 0 };
+    const rate = getRate(r.name, r.role);
+    if(rate === null){
+      flagged.push({ ...r, reason: `No rate found for role "${r.role}"` });
+    }
+    let owed = 0;
+    if(att.status === 'full') owed = rate || 0;
+    else if(att.status === 'partial') owed = Number(att.partialAmt) || 0;
+    perPerson[r.name] = (perPerson[r.name] || 0) + owed;
+    perPersonRole.push({ ...r, rate, status: att.status, owed });
+  });
+  return { rows, perPerson, perPersonRole, flagged };
+}
+
+function renderMonthToggle(){
+  const months = getAllMonths();
+  const el = document.getElementById('monthToggle');
+  if(months.length === 0){
+    el.innerHTML = '<span class="empty">Import a schedule to get started</span>';
+    return;
+  }
+  if(!selectedMonth || !months.includes(selectedMonth)) selectedMonth = months[months.length - 1];
+  el.innerHTML = months.map(m =>
+    `<button data-month="${m}" class="${m === selectedMonth ? 'active' : ''}">${m}</button>`
+  ).join('');
+  el.querySelectorAll('button').forEach(b => {
+    b.addEventListener('click', () => { selectedMonth = b.dataset.month; save(); renderAll(); });
+  });
+}
+
+const fmt = n => '$' + Math.round(n).toLocaleString();
+let chart;
+
+function renderHero(data){
+  const total = Object.values(data.perPerson).reduce((a,b)=>a+b, 0);
+  const daysCount = new Set(data.rows.map(r=>r.date)).size;
+  const peopleCount = Object.keys(data.perPerson).filter(n => data.perPerson[n] > 0).length;
+  const hasFlags = data.flagged.length > 0;
+  document.getElementById('heroCard').innerHTML = `
+    <div>
+      <div class="hero-label">Total owed &mdash; ${selectedMonth || ''}</div>
+      <div class="hero-total display">${fmt(total)}</div>
+      <div class="hero-sub">${peopleCount} people paid across ${daysCount} shoot day${daysCount===1?'':'s'}</div>
+    </div>
+    <div class="stamp ${hasFlags ? 'warn' : ''}">
+      ${hasFlags ? 'Needs review' : 'All clear'}
+      <span class="sub">${hasFlags ? data.flagged.length + ' flagged row' + (data.flagged.length===1?'':'s') : 'No flagged rows'}</span>
+    </div>
+  `;
+}
+
+function renderChart(data){
+  const sorted = Object.entries(data.perPerson).filter(([,v]) => v > 0).sort((a,b) => b[1]-a[1]).slice(0,8);
+  const ctx = document.getElementById('earnersChart').getContext('2d');
+  if(chart) chart.destroy();
+  chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: sorted.map(s => s[0]),
+      datasets: [{ data: sorted.map(s => s[1]), backgroundColor: '#D4AF37', borderRadius: 3, maxBarThickness: 26 }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display:false } },
+      scales: {
+        x: { ticks:{color:'#8A8378', font:{family:'IBM Plex Mono', size:11}}, grid:{color:'#2E2A22'} },
+        y: { ticks:{color:'#F1EDE4', font:{family:'Inter', size:12}}, grid:{display:false} }
+      }
+    }
+  });
+}
+
+function renderAttention(data){
+  const card = document.getElementById('attentionCard');
+  const body = document.getElementById('attentionBody');
+  if(data.flagged.length === 0){ card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  body.innerHTML = data.flagged.map(f => `
+    <div class="attention-row">
+      <span class="att-who">${f.name} <span class="role">${f.role} &mdash; ${f.date}</span></span>
+      <span class="msg">${f.reason}</span>
+    </div>
+  `).join('');
+}
+
+function renderAttendance(data){
+  const byDate = {};
+  data.rows.forEach(r => { (byDate[r.date] = byDate[r.date] || []).push(r); });
+  const dates = Object.keys(byDate).sort();
+  const body = document.getElementById('attendanceBody');
+  body.innerHTML = dates.map(date => {
+    const rows = byDate[date];
+    const markedCount = rows.filter(r => (attendance[r.key]||{}).status).length;
+    return `
+      <div class="day-group">
+        <div class="day-head">
+          <span class="date">${date}</span>
+          <span class="count">${markedCount}/${rows.length} marked</span>
+        </div>
+        ${rows.map(r => {
+          const att = attendance[r.key] || { status: null };
+          return `
+            <div class="att-row">
+              <span class="att-who">${r.name}<span class="role">${r.role}</span></span>
+              <div class="att-actions">
+                <button class="status-btn full ${att.status==='full'?'on':''}" onclick="setStatus('${r.key}','full')">Full Day</button>
+                <button class="status-btn partial ${att.status==='partial'?'on':''}" onclick="setStatus('${r.key}','partial')">Partial</button>
+                <button class="status-btn no ${att.status==='no'?'on':''}" onclick="setStatus('${r.key}','no')">No Show</button>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }).join('');
+}
+
+function setStatus(key, status){
+  const current = attendance[key] || {};
+  if(status === 'partial' && current.status !== 'partial'){
+    const amt = prompt('Partial day amount owed ($):', '0');
+    if(amt === null) return;
+    attendance[key] = { status: 'partial', partialAmt: Number(amt) || 0 };
+  } else {
+    attendance[key] = { status, partialAmt: current.partialAmt || 0 };
+  }
+  save();
+  renderAll();
+}
+
+function renderLedger(data){
+  const sorted = Object.entries(data.perPerson).sort((a,b) => b[1]-a[1]);
+  document.getElementById('ledgerBody').innerHTML = sorted.map(([name, owed]) => `
+    <div class="ledger-row">
+      <span class="ledger-name">${name}${owed===0 ? '<span class="zero">no confirmed pay this month</span>' : ''}</span>
+      <span class="ledger-amt mono ${owed===0 ? 'zero' : ''}">${fmt(owed)}</span>
+    </div>
+  `).join('');
+}
+
+function renderRatesTables(){
+  const rt = document.getElementById('roleRatesTable');
+  rt.innerHTML = `<tr><th>Role</th><th>Day rate</th></tr>` + Object.entries(roleRates).map(([role, rate]) => `
+    <tr>
+      <td>${role}</td>
+      <td><input type="number" value="${rate}" onchange="updateRoleRate('${role}', this.value)"></td>
+    </tr>
+  `).join('');
+
+  const pt = document.getElementById('peopleRatesTable');
+  pt.innerHTML = `<tr><th>Name</th><th>Role</th><th>Rate</th><th></th></tr>` + peopleRates.map((p, i) => `
+    <tr>
+      <td><input value="${p.name}" onchange="updatePersonRate(${i}, 'name', this.value)"></td>
+      <td><input value="${p.role}" onchange="updatePersonRate(${i}, 'role', this.value)"></td>
+      <td><input type="number" value="${p.rate}" onchange="updatePersonRate(${i}, 'rate', this.value)"></td>
+      <td><button class="btn secondary small" onclick="removePersonRate(${i})">Remove</button></td>
+    </tr>
+  `).join('');
+}
+
+function updateRoleRate(role, val){ roleRates[role] = Number(val) || 0; save(); renderAll(); }
+function addPersonRateRow(){ peopleRates.push({ name:'', role:'Editor', rate:0, active:true }); save(); renderRatesTables(); }
+function updatePersonRate(i, field, val){ peopleRates[i][field] = field==='rate' ? (Number(val)||0) : val; save(); renderAll(); }
+function removePersonRate(i){ peopleRates.splice(i,1); save(); renderAll(); }
+
+function exportBackup(){
+  const blob = new Blob([JSON.stringify({ schedule, attendance, roleRates, peopleRates }, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `funarios-payroll-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+}
+
+function exportPayrollCSV(){
+  if(!selectedMonth) return;
+  const data = computeForMonth(selectedMonth);
+  let csv = 'Person Name,Total Owed\n';
+  Object.entries(data.perPerson).sort((a,b)=>b[1]-a[1]).forEach(([n,v]) => { csv += `"${n}",${v}\n`; });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `funarios-payroll-${selectedMonth.replace(' ','-')}.csv`;
+  a.click();
+}
+
+function renderAll(){
+  const hasData = schedule.length > 0;
+  document.getElementById('emptyState').style.display = hasData ? 'none' : 'block';
+  document.getElementById('mainContent').style.display = hasData ? 'block' : 'none';
+  renderMonthToggle();
+  if(!hasData) return;
+  const data = computeForMonth(selectedMonth);
+  renderHero(data);
+  renderChart(data);
+  renderAttention(data);
+  renderAttendance(data);
+  renderLedger(data);
+  renderRatesTables();
+}
+
+renderAll();
+</script>
+</body>
+</html>
