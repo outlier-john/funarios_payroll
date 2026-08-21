@@ -191,6 +191,21 @@
     <div id="editorSyncStatus" style="font-size:12px;color:var(--muted);margin-top:10px;"></div>
   </div>
 
+  <div class="card" id="ratesSourceCard">
+    <h2 class="section-title">Data source &mdash; People Rates</h2>
+    <p style="font-size:13px;color:var(--muted);margin:0 0 12px;line-height:1.6;">
+      Published-CSV link for the <b style="color:var(--cream)">People_Rates</b> tab. Without this, editors and anyone
+      else with a custom rate will always show $0 on the dashboard.
+    </p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <input id="peopleRatesUrl" type="text" placeholder="People_Rates published CSV link"
+        style="flex:1;min-width:240px;background:var(--panel-2);border:1px solid var(--line);color:var(--cream);border-radius:5px;padding:9px 12px;font-size:13px;font-family:'IBM Plex Mono',monospace;">
+      <button class="btn small" onclick="saveAndFetchPeopleRatesUrl()">Save &amp; sync</button>
+      <button class="btn secondary small" onclick="fetchPeopleRatesFromUrl(true)">Refresh now</button>
+    </div>
+    <div id="peopleRatesSyncStatus" style="font-size:12px;color:var(--muted);margin-top:10px;"></div>
+  </div>
+
   <div id="emptyState" class="card empty-state">
     <div class="display">No schedule loaded yet</div>
 
@@ -635,6 +650,68 @@ if(attendanceUrl){ document.getElementById('attendanceUrl').value = attendanceUr
 if(scriptUrl){ document.getElementById('scriptUrl').value = scriptUrl; }
 if(scriptSecret){ document.getElementById('scriptSecret').value = scriptSecret; }
 if(attendanceUrl){ fetchAttendanceFromUrl(false); }
+let peopleRatesUrl = localStorage.getItem('funarios_peopleRatesUrl') || '';
+
+function setPeopleRatesSyncStatus(msg, isError){
+  const el = document.getElementById('peopleRatesSyncStatus');
+  el.textContent = msg;
+  el.style.color = isError ? 'var(--red)' : 'var(--muted)';
+}
+
+function saveAndFetchPeopleRatesUrl(){
+  const val = document.getElementById('peopleRatesUrl').value.trim();
+  if(!val){ setPeopleRatesSyncStatus('Paste a published CSV link first.', true); return; }
+  peopleRatesUrl = val;
+  localStorage.setItem('funarios_peopleRatesUrl', peopleRatesUrl);
+  fetchPeopleRatesFromUrl(true);
+}
+
+function detectPeopleRatesColumns(fields){
+  const norm = f => (f || '').toLowerCase().trim();
+  const find = (keywords) => {
+    for(const f of fields){ if(keywords.some(k => norm(f).includes(k))) return f; }
+    return null;
+  };
+  return {
+    nameCol: find(['name']),
+    roleCol: find(['role']),
+    rateCol: find(['rate']),
+    activeCol: find(['active'])
+  };
+}
+
+function fetchPeopleRatesFromUrl(manual){
+  if(!peopleRatesUrl){ if(manual) setPeopleRatesSyncStatus('No link saved yet.', true); return; }
+  setPeopleRatesSyncStatus('Syncing\u2026');
+  fetch(peopleRatesUrl)
+    .then(res => { if(!res.ok) throw new Error('Server returned ' + res.status); return res.text(); })
+    .then(text => {
+      const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+      const cols = detectPeopleRatesColumns(parsed.meta.fields || []);
+      if(!cols.nameCol || !cols.roleCol || !cols.rateCol){
+        setPeopleRatesSyncStatus(`Couldn't find the right columns. Found: ${(parsed.meta.fields||[]).join(', ')}`, true);
+        return;
+      }
+      const fresh = [];
+      parsed.data.forEach(row => {
+        const name = (row[cols.nameCol] || '').trim();
+        const role = (row[cols.roleCol] || '').trim();
+        if(!name || !role) return;
+        const rate = parseMoney(row[cols.rateCol]);
+        const activeRaw = cols.activeCol ? (row[cols.activeCol] || '').trim().toLowerCase() : 'y';
+        const active = activeRaw !== 'n' && activeRaw !== 'no';
+        fresh.push({ name, role, rate, active });
+      });
+      peopleRates = fresh;
+      save();
+      renderAll();
+      const now = new Date().toLocaleString();
+      setPeopleRatesSyncStatus(`Last synced ${now} \u2014 ${fresh.length} rate${fresh.length===1?'':'s'} loaded.`);
+    })
+    .catch(err => { setPeopleRatesSyncStatus('Sync failed: ' + err.message, true); });
+}
+
+if(peopleRatesUrl){ document.getElementById('peopleRatesUrl').value = peopleRatesUrl; fetchPeopleRatesFromUrl(false); }
 if(editorUrl){ document.getElementById('editorUrl').value = editorUrl; fetchEditorsFromUrl(false); }
 
 function getRate(name, role){
@@ -950,7 +1027,7 @@ function exportBackup(){
 }
 
 function resetAndResync(){
-  if(!confirm('This clears everything stored in this browser (schedule rows, attendance marks, and editor deliverables) and pulls a completely fresh copy from your Google Sheets links. Nothing in the Sheet itself is affected. Continue?')){
+  if(!confirm('This clears everything stored in this browser (schedule rows, attendance marks, rates, and editor deliverables) and pulls a completely fresh copy from your Google Sheets links. Nothing in the Sheet itself is affected. Continue?')){
     return;
   }
   schedule = [];
@@ -961,6 +1038,7 @@ function resetAndResync(){
   if(sheetUrl) fetchFromUrl(true);
   if(attendanceUrl) fetchAttendanceFromUrl(true);
   if(editorUrl) fetchEditorsFromUrl(true);
+  if(peopleRatesUrl) fetchPeopleRatesFromUrl(true);
 }
 
 function exportPayrollCSV(){
