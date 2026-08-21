@@ -231,11 +231,6 @@
       <div id="attendanceBody"></div>
     </div>
 
-    <div class="card">
-      <h2 class="section-title">Full ledger — one row per person</h2>
-      <div id="ledgerBody"></div>
-    </div>
-
     <div class="card" id="editorsCard" style="display:none;">
       <h2 class="section-title">Editors — videos delivered this period</h2>
       <div id="editorsBody"></div>
@@ -252,6 +247,11 @@
         </div>
         <div id="addVideoStatus" style="font-size:12px;color:var(--muted);margin-top:8px;"></div>
       </div>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title">Full ledger — one row per person</h2>
+      <div id="ledgerBody"></div>
     </div>
 
     <div class="card">
@@ -285,6 +285,14 @@
 </div>
 
 <script>
+// Pre-filled data source defaults so any device works with zero setup.
+// The secret is intentionally NOT included here — see the "Data source — Attendance" box.
+const DEFAULT_SCHEDULE_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTncuOTEJSVGmRtcB9HZfoG4j_cHL4hGWz78OuIZ7xeHpwBxvvG7I63pla_RiEztB2YedjG0VUw2N8I/pub?gid=733436559&single=true&output=csv";
+const DEFAULT_ATTENDANCE_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTncuOTEJSVGmRtcB9HZfoG4j_cHL4hGWz78OuIZ7xeHpwBxvvG7I63pla_RiEztB2YedjG0VUw2N8I/pub?gid=1794526141&single=true&output=csv";
+const DEFAULT_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxElDVycF39_gGV6Z-CWD7SpbUyr54nunFuZCm4COQxnZOKiRn6aZMnECSlKl3tGm0/exec";
+const DEFAULT_EDITOR_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTncuOTEJSVGmRtcB9HZfoG4j_cHL4hGWz78OuIZ7xeHpwBxvvG7I63pla_RiEztB2YedjG0VUw2N8I/pub?gid=157299368&single=true&output=csv";
+const DEFAULT_PEOPLE_RATES_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTncuOTEJSVGmRtcB9HZfoG4j_cHL4hGWz78OuIZ7xeHpwBxvvG7I63pla_RiEztB2YedjG0VUw2N8I/pub?gid=552775998&single=true&output=csv";
+
 const DEFAULT_ROLE_RATES = {
   "Lead Actor": 150,
   "Supporting Actor": 125,
@@ -438,9 +446,9 @@ document.getElementById('fileInput').addEventListener('change', function(e){
   });
 });
 
-let sheetUrl = localStorage.getItem('funarios_sheetUrl') || '';
-let attendanceUrl = localStorage.getItem('funarios_attendanceUrl') || '';
-let scriptUrl = localStorage.getItem('funarios_scriptUrl') || '';
+let sheetUrl = localStorage.getItem('funarios_sheetUrl') || DEFAULT_SCHEDULE_URL;
+let attendanceUrl = localStorage.getItem('funarios_attendanceUrl') || DEFAULT_ATTENDANCE_URL;
+let scriptUrl = localStorage.getItem('funarios_scriptUrl') || DEFAULT_SCRIPT_URL;
 let scriptSecret = localStorage.getItem('funarios_scriptSecret') || '';
 
 function setSyncStatus(msg, isError){
@@ -570,7 +578,7 @@ function pushAttendanceUpdate(r, status, partialAmt){
   });
 }
 
-let editorUrl = localStorage.getItem('funarios_editorUrl') || '';
+let editorUrl = localStorage.getItem('funarios_editorUrl') || DEFAULT_EDITOR_URL;
 
 function setEditorSyncStatus(msg, isError){
   const el = document.getElementById('editorSyncStatus');
@@ -650,7 +658,7 @@ if(attendanceUrl){ document.getElementById('attendanceUrl').value = attendanceUr
 if(scriptUrl){ document.getElementById('scriptUrl').value = scriptUrl; }
 if(scriptSecret){ document.getElementById('scriptSecret').value = scriptSecret; }
 if(attendanceUrl){ fetchAttendanceFromUrl(false); }
-let peopleRatesUrl = localStorage.getItem('funarios_peopleRatesUrl') || '';
+let peopleRatesUrl = localStorage.getItem('funarios_peopleRatesUrl') || DEFAULT_PEOPLE_RATES_URL;
 
 function setPeopleRatesSyncStatus(msg, isError){
   const el = document.getElementById('peopleRatesSyncStatus');
@@ -1064,8 +1072,8 @@ function renderAll(){
   renderChart(data);
   renderAttention(data);
   renderAttendance(data);
-  renderLedger(data);
   renderEditors(data);
+  renderLedger(data);
   renderRatesTables();
 }
 
