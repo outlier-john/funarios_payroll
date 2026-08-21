@@ -114,6 +114,9 @@
   .video-row .approved.yes{background:rgba(107,143,90,0.2);color:var(--green);}
   .video-row .approved.no{background:rgba(194,73,58,0.15);color:var(--red);}
   .video-row .amt{font-family:'IBM Plex Mono',monospace;margin-left:12px;min-width:60px;text-align:right;}
+  .video-row .approved{cursor:pointer;border:1px solid transparent;}
+  .video-row .approved.no:hover{border-color:var(--red);}
+  .video-row .approved.yes:hover{border-color:var(--green);}
 
   .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;}
 
@@ -221,6 +224,19 @@
     <div class="card" id="editorsCard" style="display:none;">
       <h2 class="section-title">Editors — videos delivered this period</h2>
       <div id="editorsBody"></div>
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--line);">
+        <h2 class="section-title">Add a video</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <input id="newVideoEditor" type="text" placeholder="Editor name"
+            style="flex:1;min-width:120px;background:var(--panel-2);border:1px solid var(--line);color:var(--cream);border-radius:5px;padding:9px 12px;font-size:13px;">
+          <input id="newVideoTitle" type="text" placeholder="Video title"
+            style="flex:2;min-width:180px;background:var(--panel-2);border:1px solid var(--line);color:var(--cream);border-radius:5px;padding:9px 12px;font-size:13px;">
+          <input id="newVideoDate" type="date"
+            style="background:var(--panel-2);border:1px solid var(--line);color:var(--cream);border-radius:5px;padding:9px 12px;font-size:13px;font-family:'IBM Plex Mono',monospace;">
+          <button class="btn small" onclick="addVideo()">Add</button>
+        </div>
+        <div id="addVideoStatus" style="font-size:12px;color:var(--muted);margin-top:8px;"></div>
+      </div>
     </div>
 
     <div class="card">
@@ -814,13 +830,83 @@ function renderEditors(data){
         ${e.videos.map(v => `
           <div class="video-row">
             <span class="title">${v.title}</span>
-            <span class="approved ${v.approved?'yes':'no'}">${v.approved ? 'Approved' : 'Pending'}</span>
+            <span class="approved ${v.approved?'yes':'no'}" onclick="toggleEditorApproval('${escJs(v.editor)}','${escJs(v.title)}')">${v.approved ? 'Approved \u2713' : 'Click to approve'}</span>
             <span class="amt mono">${v.approved ? fmt(v.payout) : '—'}</span>
           </div>
         `).join('')}
       </div>
     `;
   }).join('');
+}
+
+function escJs(s){ return (s || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+
+function toggleEditorApproval(editor, title){
+  const rec = editorDeliverables.find(e => e.editor === editor && e.title === title);
+  if(!rec) return;
+  rec.approved = !rec.approved;
+  if(rec.approved){
+    const rate = getRate(editor, 'Editor');
+    rec.payout = rate || 0;
+    if(rate === null){
+      setEditorSyncStatus(`Approved, but no rate found for "${editor}" as Editor in People_Rates \u2014 payout will show $0 until that's added.`, true);
+    }
+  } else {
+    rec.payout = 0;
+  }
+  save();
+  renderAll();
+  if(!scriptUrl || !scriptSecret){
+    setEditorSyncStatus('Marked locally only \u2014 add the Apps Script URL and secret in the Attendance sync box above to also write this into the Sheet.', true);
+    return;
+  }
+  fetch(scriptUrl, {
+    method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action:'editor_update', editor, title, field:'approved', value: rec.approved, secret: scriptSecret })
+  }).then(() => {
+    setEditorSyncStatus('Sent to Sheet. (Can\'t confirm it landed from here \u2014 check the Sheet if unsure.)');
+  }).catch(err => {
+    setEditorSyncStatus('Could not reach the Apps Script URL: ' + err.message, true);
+  });
+}
+
+function addVideo(){
+  const editor = document.getElementById('newVideoEditor').value.trim();
+  const title = document.getElementById('newVideoTitle').value.trim();
+  const dateVal = document.getElementById('newVideoDate').value;
+  const statusEl = document.getElementById('addVideoStatus');
+  if(!editor || !title || !dateVal){
+    statusEl.textContent = 'Fill in editor, title, and date first.';
+    statusEl.style.color = 'var(--red)';
+    return;
+  }
+  if(editorDeliverables.find(e => e.editor === editor && e.title === title)){
+    statusEl.textContent = 'That editor/title already exists.';
+    statusEl.style.color = 'var(--red)';
+    return;
+  }
+  editorDeliverables.push({ date: dateVal, editor, title, approved: false, payout: 0 });
+  save();
+  renderAll();
+  document.getElementById('newVideoEditor').value = '';
+  document.getElementById('newVideoTitle').value = '';
+  document.getElementById('newVideoDate').value = '';
+  statusEl.textContent = 'Added locally.';
+  statusEl.style.color = 'var(--muted)';
+  if(!scriptUrl || !scriptSecret){
+    statusEl.textContent += ' Add the Apps Script URL and secret above to also save this into the Sheet.';
+    statusEl.style.color = 'var(--red)';
+    return;
+  }
+  fetch(scriptUrl, {
+    method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action:'editor_add', editor, title, date: dateVal, secret: scriptSecret })
+  }).then(() => {
+    statusEl.textContent = 'Added locally and sent to the Sheet.';
+  }).catch(err => {
+    statusEl.textContent = 'Added locally, but could not reach the Sheet: ' + err.message;
+    statusEl.style.color = 'var(--red)';
+  });
 }
 
 function renderRatesTables(){
