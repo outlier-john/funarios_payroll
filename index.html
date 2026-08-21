@@ -397,10 +397,11 @@ function detectColumns(fields, rows){
   let dateCol = find(['date']);
   const nameCol = find(['person name','full name','talent','actor','cast','name'], ['username']);
   const roleCol = find(['role','position','character','job']);
+  const projectCol = find(['project','production','show','series']);
   if(!dateCol && rows && rows.length){
     dateCol = looksLikeDateColumn(fields, rows);
   }
-  return { dateCol, nameCol, roleCol };
+  return { dateCol, nameCol, roleCol, projectCol };
 }
 
 function mergeScheduleRows(rows, fields){
@@ -418,9 +419,15 @@ function mergeScheduleRows(rows, fields){
     if(!name || !role) return;
     const date = parseDateFlexible(row[cols.dateCol]);
     if(!date){ badDates++; return; }
+    const project = cols.projectCol ? (row[cols.projectCol] || '').trim() : '';
     const key = rowKey(date, name, role);
-    if(schedule.find(r => r.key === key)){ skipped++; return; }
-    schedule.push({ key, date, name, role });
+    const existing = schedule.find(r => r.key === key);
+    if(existing){
+      if(project && !existing.project){ existing.project = project; }
+      skipped++;
+      return;
+    }
+    schedule.push({ key, date, name, role, project });
     added++;
   });
   return { added, skipped, badDates, cols };
@@ -848,6 +855,12 @@ function renderAttention(data){
   `).join('');
 }
 
+function escapeHtml(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 function renderAttendance(data){
   const byDate = {};
   data.rows.forEach(r => { (byDate[r.date] = byDate[r.date] || []).push(r); });
@@ -856,21 +869,23 @@ function renderAttendance(data){
   body.innerHTML = dates.map(date => {
     const rows = byDate[date];
     const markedCount = rows.filter(r => (attendance[r.key]||{}).status).length;
+    const project = rows.find(r => r.project)?.project || '';
     return `
       <div class="day-group">
         <div class="day-head">
-          <span class="date">${date}</span>
+          <span class="date">${escapeHtml(date)}${project ? ' &mdash; ' + escapeHtml(project) : ''}</span>
           <span class="count">${markedCount}/${rows.length} marked</span>
         </div>
         ${rows.map(r => {
           const att = attendance[r.key] || { status: null };
+          const dataAttrs = `data-key="${escapeHtml(r.key)}" data-date="${escapeHtml(r.date)}" data-name="${escapeHtml(r.name)}" data-role="${escapeHtml(r.role)}"`;
           return `
             <div class="att-row">
-              <span class="att-who">${r.name}<span class="role">${r.role}</span></span>
+              <span class="att-who">${escapeHtml(r.name)}<span class="role">${escapeHtml(r.role)}</span></span>
               <div class="att-actions">
-                <button class="status-btn full ${att.status==='full'?'on':''}" onclick="setStatus('${r.key}','${r.date}','${r.name.replace(/'/g,"\\'")}','${r.role.replace(/'/g,"\\'")}','full')">Full Day</button>
-                <button class="status-btn partial ${att.status==='partial'?'on':''}" onclick="setStatus('${r.key}','${r.date}','${r.name.replace(/'/g,"\\'")}','${r.role.replace(/'/g,"\\'")}','partial')">Partial</button>
-                <button class="status-btn no ${att.status==='no'?'on':''}" onclick="setStatus('${r.key}','${r.date}','${r.name.replace(/'/g,"\\'")}','${r.role.replace(/'/g,"\\'")}','no')">No Show</button>
+                <button class="status-btn full ${att.status==='full'?'on':''}" ${dataAttrs} data-status="full">Full Day</button>
+                <button class="status-btn partial ${att.status==='partial'?'on':''}" ${dataAttrs} data-status="partial">Partial</button>
+                <button class="status-btn no ${att.status==='no'?'on':''}" ${dataAttrs} data-status="no">No Show</button>
               </div>
             </div>
           `;
@@ -922,7 +937,7 @@ function renderEditors(data){
         ${e.videos.map(v => `
           <div class="video-row">
             <span class="title">${v.title}</span>
-            <span class="approved ${v.approved?'yes':'no'}" onclick="toggleEditorApproval('${escJs(v.editor)}','${escJs(v.title)}')">${v.approved ? 'Approved \u2713' : 'Click to approve'}</span>
+            <span class="approved ${v.approved?'yes':'no'}" data-editor="${escapeHtml(v.editor)}" data-title="${escapeHtml(v.title)}">${v.approved ? 'Approved \u2713' : 'Click to approve'}</span>
             <span class="amt mono">${v.approved ? fmt(v.payout) : '—'}</span>
           </div>
         `).join('')}
@@ -930,8 +945,6 @@ function renderEditors(data){
     `;
   }).join('');
 }
-
-function escJs(s){ return (s || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
 
 function toggleEditorApproval(editor, title){
   const rec = editorDeliverables.find(e => e.editor === editor && e.title === title);
@@ -1076,6 +1089,18 @@ function renderAll(){
   renderLedger(data);
   renderRatesTables();
 }
+
+document.getElementById('attendanceBody').addEventListener('click', function(e){
+  const btn = e.target.closest('.status-btn');
+  if(!btn) return;
+  setStatus(btn.dataset.key, btn.dataset.date, btn.dataset.name, btn.dataset.role, btn.dataset.status);
+});
+
+document.getElementById('editorsBody').addEventListener('click', function(e){
+  const badge = e.target.closest('.approved');
+  if(!badge) return;
+  toggleEditorApproval(badge.dataset.editor, badge.dataset.title);
+});
 
 renderAll();
 </script>
