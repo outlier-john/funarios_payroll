@@ -339,6 +339,13 @@ function parseDateFlexible(raw){
   return null;
 }
 
+function parseMoney(val){
+  if(val === null || val === undefined) return 0;
+  const cleaned = String(val).replace(/[^0-9.\-]/g, '');
+  const n = parseFloat(cleaned);
+  return isNaN(n) ? 0 : n;
+}
+
 function looksLikeDateColumn(fields, sampleRows){
   const scores = {};
   fields.forEach(f => { scores[f] = 0; });
@@ -517,7 +524,7 @@ function fetchAttendanceFromUrl(manual){
         const code = STATUS_TEXT_TO_CODE[statusRaw];
         if(!code) return;
         const key = rowKey(date, name, role);
-        const partialAmt = cols.partialCol ? (Number(row[cols.partialCol]) || 0) : 0;
+        const partialAmt = cols.partialCol ? parseMoney(row[cols.partialCol]) : 0;
         attendance[key] = { status: code, partialAmt };
         updated++;
       });
@@ -597,7 +604,7 @@ function mergeEditorRows(rows, fields){
     if(!date) return;
     const approvedRaw = cols.approvedCol ? (row[cols.approvedCol] || '').trim().toLowerCase() : '';
     const approved = approvedRaw === 'y' || approvedRaw === 'yes';
-    const payout = cols.payoutCol ? (Number(row[cols.payoutCol]) || 0) : 0;
+    const payout = cols.payoutCol ? parseMoney(row[cols.payoutCol]) : 0;
     editorDeliverables.push({ date, editor, title, approved, payout });
   });
   return { count: editorDeliverables.length };
