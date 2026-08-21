@@ -103,6 +103,18 @@
   table.rates td{padding:6px 8px;border-bottom:1px solid var(--line);}
   table.rates input{background:var(--panel-2);border:1px solid var(--line);color:var(--cream);border-radius:4px;padding:5px 8px;font-size:13px;width:100%;font-family:'IBM Plex Mono',monospace;}
 
+  .editor-group{border:1px solid var(--line);border-radius:6px;margin-bottom:12px;overflow:hidden;}
+  .editor-head{background:var(--panel-2);padding:10px 16px;display:flex;justify-content:space-between;align-items:center;}
+  .editor-head .name{font-size:14px;font-weight:600;}
+  .editor-head .stats{font-size:12px;color:var(--muted);}
+  .editor-head .total{font-family:'IBM Plex Mono',monospace;color:var(--gold);font-weight:600;}
+  .video-row{display:flex;justify-content:space-between;align-items:center;padding:9px 16px;border-top:1px solid var(--line);font-size:13px;}
+  .video-row .title{flex:1;}
+  .video-row .approved{font-size:11px;padding:2px 8px;border-radius:3px;margin-left:8px;}
+  .video-row .approved.yes{background:rgba(107,143,90,0.2);color:var(--green);}
+  .video-row .approved.no{background:rgba(194,73,58,0.15);color:var(--red);}
+  .video-row .amt{font-family:'IBM Plex Mono',monospace;margin-left:12px;min-width:60px;text-align:right;}
+
   .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;}
 
   footer{margin-top:8px;font-size:12px;color:var(--muted);line-height:1.6;}
@@ -161,6 +173,21 @@
     <div id="attendanceSyncStatus" style="font-size:12px;color:var(--muted);margin-top:10px;"></div>
   </div>
 
+  <div class="card" id="editorSourceCard">
+    <h2 class="section-title">Data source &mdash; Editor Deliverables</h2>
+    <p style="font-size:13px;color:var(--muted);margin:0 0 12px;line-height:1.6;">
+      Published-CSV link for the <b style="color:var(--cream)">Editor_Deliverables</b> tab. Shows which videos each editor
+      delivered, whether Lonnie approved them, and what they're owed.
+    </p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <input id="editorUrl" type="text" placeholder="Editor_Deliverables published CSV link"
+        style="flex:1;min-width:240px;background:var(--panel-2);border:1px solid var(--line);color:var(--cream);border-radius:5px;padding:9px 12px;font-size:13px;font-family:'IBM Plex Mono',monospace;">
+      <button class="btn small" onclick="saveAndFetchEditorUrl()">Save &amp; sync</button>
+      <button class="btn secondary small" onclick="fetchEditorsFromUrl(true)">Refresh now</button>
+    </div>
+    <div id="editorSyncStatus" style="font-size:12px;color:var(--muted);margin-top:10px;"></div>
+  </div>
+
   <div id="emptyState" class="card empty-state">
     <div class="display">No schedule loaded yet</div>
 
@@ -189,6 +216,11 @@
     <div class="card">
       <h2 class="section-title">Full ledger — one row per person</h2>
       <div id="ledgerBody"></div>
+    </div>
+
+    <div class="card" id="editorsCard" style="display:none;">
+      <h2 class="section-title">Editors — videos delivered this period</h2>
+      <div id="editorsBody"></div>
     </div>
 
     <div class="card">
@@ -234,6 +266,7 @@ let schedule = JSON.parse(localStorage.getItem('funarios_schedule') || '[]');
 let attendance = JSON.parse(localStorage.getItem('funarios_attendance') || '{}');
 let roleRates = JSON.parse(localStorage.getItem('funarios_roleRates') || JSON.stringify(DEFAULT_ROLE_RATES));
 let peopleRates = JSON.parse(localStorage.getItem('funarios_peopleRates') || '[]');
+let editorDeliverables = JSON.parse(localStorage.getItem('funarios_editorDeliverables') || '[]');
 let selectedMonth = localStorage.getItem('funarios_selectedMonth') || null;
 
 function save(){
@@ -241,15 +274,35 @@ function save(){
   localStorage.setItem('funarios_attendance', JSON.stringify(attendance));
   localStorage.setItem('funarios_roleRates', JSON.stringify(roleRates));
   localStorage.setItem('funarios_peopleRates', JSON.stringify(peopleRates));
+  localStorage.setItem('funarios_editorDeliverables', JSON.stringify(editorDeliverables));
   if(selectedMonth) localStorage.setItem('funarios_selectedMonth', selectedMonth);
 }
 
 function rowKey(date, name, role){ return date + '|' + name + '|' + role; }
 
+function payPeriodInfo(dateStr){
+  const parts = (dateStr || '').split('-').map(Number);
+  const y = parts[0], m = parts[1], d = parts[2];
+  if(!y || !m || !d) return null;
+  const MONTH_NAMES = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  let startY, startM, endY, endM;
+  if(d >= 21){
+    startY = y; startM = m;
+    endM = m + 1; endY = y;
+    if(endM > 12){ endM = 1; endY += 1; }
+  } else {
+    endY = y; endM = m;
+    startM = m - 1; startY = y;
+    if(startM < 1){ startM = 12; startY -= 1; }
+  }
+  const label = `${MONTH_NAMES[startM]} 21 \u2013 ${MONTH_NAMES[endM]} 20, ${endY}`;
+  const sortKey = `${endY}-${String(endM).padStart(2,'0')}-20`;
+  return { label, sortKey };
+}
+
 function monthLabel(dateStr){
-  const d = new Date(dateStr + 'T00:00:00');
-  if(isNaN(d)) return null;
-  return d.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+  const info = payPeriodInfo(dateStr);
+  return info ? info.label : null;
 }
 
 function parseDateFlexible(raw){
@@ -479,6 +532,78 @@ function pushAttendanceUpdate(r, status, partialAmt){
   });
 }
 
+let editorUrl = localStorage.getItem('funarios_editorUrl') || '';
+
+function setEditorSyncStatus(msg, isError){
+  const el = document.getElementById('editorSyncStatus');
+  el.textContent = msg;
+  el.style.color = isError ? 'var(--red)' : 'var(--muted)';
+}
+
+function saveAndFetchEditorUrl(){
+  const val = document.getElementById('editorUrl').value.trim();
+  if(!val){ setEditorSyncStatus('Paste a published CSV link first.', true); return; }
+  editorUrl = val;
+  localStorage.setItem('funarios_editorUrl', editorUrl);
+  fetchEditorsFromUrl(true);
+}
+
+function detectEditorColumns(fields, rows){
+  const norm = f => (f || '').toLowerCase().trim();
+  const find = (keywords, avoid) => {
+    for(const f of fields){
+      const n = norm(f);
+      if(avoid && avoid.some(a => n.includes(a))) continue;
+      if(keywords.some(k => n.includes(k))) return f;
+    }
+    return null;
+  };
+  let dateCol = find(['delivery date','date']);
+  const editorCol = find(['editor name','editor']);
+  const titleCol = find(['video title','title']);
+  const approvedCol = find(['approved']);
+  const payoutCol = find(['payout']);
+  if(!dateCol && rows && rows.length) dateCol = looksLikeDateColumn(fields, rows);
+  return { dateCol, editorCol, titleCol, approvedCol, payoutCol };
+}
+
+function mergeEditorRows(rows, fields){
+  const cols = detectEditorColumns(fields || Object.keys(rows[0] || {}), rows);
+  if(!cols.dateCol || !cols.editorCol || !cols.titleCol){
+    return { error: `Couldn't find the right columns. Looking for a date, an editor name, and a video title. Found: ${(fields||[]).join(', ') || 'none'}.` };
+  }
+  editorDeliverables = [];
+  rows.forEach(row => {
+    const editor = (row[cols.editorCol] || '').trim();
+    const title = (row[cols.titleCol] || '').trim();
+    if(!editor || !title) return;
+    const date = parseDateFlexible(row[cols.dateCol]);
+    if(!date) return;
+    const approvedRaw = cols.approvedCol ? (row[cols.approvedCol] || '').trim().toLowerCase() : '';
+    const approved = approvedRaw === 'y' || approvedRaw === 'yes';
+    const payout = cols.payoutCol ? (Number(row[cols.payoutCol]) || 0) : 0;
+    editorDeliverables.push({ date, editor, title, approved, payout });
+  });
+  return { count: editorDeliverables.length };
+}
+
+function fetchEditorsFromUrl(manual){
+  if(!editorUrl){ if(manual) setEditorSyncStatus('No link saved yet.', true); return; }
+  setEditorSyncStatus('Syncing\u2026');
+  fetch(editorUrl)
+    .then(res => { if(!res.ok) throw new Error('Server returned ' + res.status); return res.text(); })
+    .then(text => {
+      const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+      const r = mergeEditorRows(parsed.data, parsed.meta.fields);
+      if(r.error){ setEditorSyncStatus(r.error, true); return; }
+      save();
+      renderAll();
+      const now = new Date().toLocaleString();
+      setEditorSyncStatus(`Last synced ${now} \u2014 ${r.count} deliverable${r.count===1?'':'s'} loaded.`);
+    })
+    .catch(err => { setEditorSyncStatus('Sync failed: ' + err.message, true); });
+}
+
 if(sheetUrl){
   document.getElementById('sheetUrl').value = sheetUrl;
   fetchFromUrl(false);
@@ -487,6 +612,7 @@ if(attendanceUrl){ document.getElementById('attendanceUrl').value = attendanceUr
 if(scriptUrl){ document.getElementById('scriptUrl').value = scriptUrl; }
 if(scriptSecret){ document.getElementById('scriptSecret').value = scriptSecret; }
 if(attendanceUrl){ fetchAttendanceFromUrl(false); }
+if(editorUrl){ document.getElementById('editorUrl').value = editorUrl; fetchEditorsFromUrl(false); }
 
 function getRate(name, role){
   const override = peopleRates.find(p => p.name === name && p.role === role && p.active !== false);
@@ -496,9 +622,16 @@ function getRate(name, role){
 }
 
 function getAllMonths(){
-  const months = new Set();
-  schedule.forEach(r => { const m = monthLabel(r.date); if(m) months.add(m); });
-  return [...months].sort((a,b) => new Date(a) - new Date(b));
+  const map = {};
+  schedule.forEach(r => {
+    const info = payPeriodInfo(r.date);
+    if(info) map[info.label] = info.sortKey;
+  });
+  editorDeliverables.forEach(e => {
+    const info = payPeriodInfo(e.date);
+    if(info) map[info.label] = info.sortKey;
+  });
+  return Object.keys(map).sort((a,b) => (map[a] > map[b] ? 1 : -1));
 }
 
 function computeForMonth(month){
@@ -518,7 +651,20 @@ function computeForMonth(month){
     perPerson[r.name] = (perPerson[r.name] || 0) + owed;
     perPersonRole.push({ ...r, rate, status: att.status, owed });
   });
-  return { rows, perPerson, perPersonRole, flagged };
+
+  const edRows = editorDeliverables.filter(e => monthLabel(e.date) === month);
+  const perEditor = {};
+  edRows.forEach(e => {
+    if(!perEditor[e.editor]) perEditor[e.editor] = { videos: [], total: 0, approvedCount: 0 };
+    perEditor[e.editor].videos.push(e);
+    if(e.approved){
+      perEditor[e.editor].total += e.payout;
+      perEditor[e.editor].approvedCount += 1;
+    }
+    perPerson[e.editor] = (perPerson[e.editor] || 0) + (e.approved ? e.payout : 0);
+  });
+
+  return { rows, perPerson, perPersonRole, flagged, edRows, perEditor };
 }
 
 function renderMonthToggle(){
@@ -650,6 +796,33 @@ function renderLedger(data){
   `).join('');
 }
 
+function renderEditors(data){
+  const card = document.getElementById('editorsCard');
+  const names = Object.keys(data.perEditor || {});
+  if(names.length === 0){ card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  const sorted = names.sort((a,b) => data.perEditor[b].total - data.perEditor[a].total);
+  document.getElementById('editorsBody').innerHTML = sorted.map(name => {
+    const e = data.perEditor[name];
+    return `
+      <div class="editor-group">
+        <div class="editor-head">
+          <span class="name">${name}</span>
+          <span class="stats">${e.videos.length} video${e.videos.length===1?'':'s'} delivered, ${e.approvedCount} approved</span>
+          <span class="total">${fmt(e.total)}</span>
+        </div>
+        ${e.videos.map(v => `
+          <div class="video-row">
+            <span class="title">${v.title}</span>
+            <span class="approved ${v.approved?'yes':'no'}">${v.approved ? 'Approved' : 'Pending'}</span>
+            <span class="amt mono">${v.approved ? fmt(v.payout) : '—'}</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }).join('');
+}
+
 function renderRatesTables(){
   const rt = document.getElementById('roleRatesTable');
   rt.innerHTML = `<tr><th>Role</th><th>Day rate</th></tr>` + Object.entries(roleRates).map(([role, rate]) => `
@@ -684,15 +857,17 @@ function exportBackup(){
 }
 
 function resetAndResync(){
-  if(!confirm('This clears everything stored in this browser (schedule rows and any attendance marks) and pulls a completely fresh copy from your Google Sheets links. Attendance already marked in the Sheet is safe \u2014 this only clears what\'s cached here. Continue?')){
+  if(!confirm('This clears everything stored in this browser (schedule rows, attendance marks, and editor deliverables) and pulls a completely fresh copy from your Google Sheets links. Nothing in the Sheet itself is affected. Continue?')){
     return;
   }
   schedule = [];
   attendance = {};
+  editorDeliverables = [];
   save();
   renderAll();
   if(sheetUrl) fetchFromUrl(true);
   if(attendanceUrl) fetchAttendanceFromUrl(true);
+  if(editorUrl) fetchEditorsFromUrl(true);
 }
 
 function exportPayrollCSV(){
@@ -703,12 +878,12 @@ function exportPayrollCSV(){
   const blob = new Blob([csv], { type: 'text/csv' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `funarios-payroll-${selectedMonth.replace(' ','-')}.csv`;
+  a.download = `funarios-payroll-${selectedMonth.replace(/[^a-zA-Z0-9]+/g,'-')}.csv`;
   a.click();
 }
 
 function renderAll(){
-  const hasData = schedule.length > 0;
+  const hasData = schedule.length > 0 || editorDeliverables.length > 0;
   document.getElementById('emptyState').style.display = hasData ? 'none' : 'block';
   document.getElementById('mainContent').style.display = hasData ? 'block' : 'none';
   renderMonthToggle();
@@ -719,6 +894,7 @@ function renderAll(){
   renderAttention(data);
   renderAttendance(data);
   renderLedger(data);
+  renderEditors(data);
   renderRatesTables();
 }
 
