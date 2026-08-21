@@ -206,6 +206,7 @@
       <button class="btn secondary" onclick="document.getElementById('fileInput').click()">Import a CSV file</button>
       <button class="btn secondary" onclick="exportBackup()">Download backup (JSON)</button>
       <button class="btn secondary" onclick="exportPayrollCSV()">Export this month's payroll (CSV)</button>
+      <button class="btn secondary" onclick="resetAndResync()" style="border-color:var(--red);color:var(--red);">Reset &amp; re-sync</button>
     </div>
 
   </div>
@@ -680,6 +681,18 @@ function exportBackup(){
   a.href = URL.createObjectURL(blob);
   a.download = `funarios-payroll-backup-${new Date().toISOString().slice(0,10)}.json`;
   a.click();
+}
+
+function resetAndResync(){
+  if(!confirm('This clears everything stored in this browser (schedule rows and any attendance marks) and pulls a completely fresh copy from your Google Sheets links. Attendance already marked in the Sheet is safe \u2014 this only clears what\'s cached here. Continue?')){
+    return;
+  }
+  schedule = [];
+  attendance = {};
+  save();
+  renderAll();
+  if(sheetUrl) fetchFromUrl(true);
+  if(attendanceUrl) fetchAttendanceFromUrl(true);
 }
 
 function exportPayrollCSV(){
