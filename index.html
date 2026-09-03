@@ -89,6 +89,9 @@
   .att-row{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-top:1px solid var(--line);flex-wrap:wrap;gap:8px;}
   .att-who{font-size:13px;}
   .att-who .role{color:var(--muted);font-size:11px;margin-left:6px;}
+  .role-select{background:var(--panel-2);border:1px solid var(--line);color:var(--muted);font-size:11px;border-radius:4px;padding:3px 6px;margin-left:8px;font-family:'Inter',sans-serif;}
+  .role-select:hover{border-color:var(--gold-dim);color:var(--cream);}
+  .role-select:focus{outline:none;border-color:var(--gold);color:var(--cream);}
   .att-actions{display:flex;gap:6px;}
   .status-btn{border:1px solid var(--line);background:transparent;color:var(--muted);font-size:11px;padding:5px 10px;border-radius:4px;}
   .status-btn.full.on{background:var(--green);border-color:var(--green);color:#0B0A08;font-weight:600;}
@@ -736,6 +739,13 @@ function getRate(name, role){
   return null;
 }
 
+function getAllKnownRoles(){
+  const set = new Set(Object.keys(roleRates));
+  peopleRates.forEach(p => { if(p.role) set.add(p.role); });
+  schedule.forEach(r => { if(r.role) set.add(r.role); });
+  return Array.from(set).sort();
+}
+
 function getAllMonths(){
   const map = {};
   schedule.forEach(r => {
@@ -879,9 +889,16 @@ function renderAttendance(data){
         ${rows.map(r => {
           const att = attendance[r.key] || { status: null };
           const dataAttrs = `data-key="${escapeHtml(r.key)}" data-date="${escapeHtml(r.date)}" data-name="${escapeHtml(r.name)}" data-role="${escapeHtml(r.role)}"`;
+          const roleOptions = getAllKnownRoles().map(role =>
+            `<option value="${escapeHtml(role)}" ${role === r.role ? 'selected' : ''}>${escapeHtml(role)}</option>`
+          ).join('');
           return `
             <div class="att-row">
-              <span class="att-who">${escapeHtml(r.name)}<span class="role">${escapeHtml(r.role)}</span></span>
+              <span class="att-who">${escapeHtml(r.name)}
+                <select class="role-select" data-key="${escapeHtml(r.key)}" data-date="${escapeHtml(r.date)}" data-name="${escapeHtml(r.name)}" data-oldrole="${escapeHtml(r.role)}">
+                  ${roleOptions}
+                </select>
+              </span>
               <div class="att-actions">
                 <button class="status-btn full ${att.status==='full'?'on':''}" ${dataAttrs} data-status="full">Full Day</button>
                 <button class="status-btn partial ${att.status==='partial'?'on':''}" ${dataAttrs} data-status="partial">Partial</button>
@@ -907,6 +924,45 @@ function setStatus(key, date, name, role, status){
   save();
   renderAll();
   pushAttendanceUpdate({ date, name, role }, status, partialAmt);
+}
+
+function changeRole(oldKey, date, name, oldRole, newRole){
+  if(newRole === oldRole) return;
+  const newKey = rowKey(date, name, newRole);
+  const collision = schedule.find(r => r.key === newKey);
+  if(collision){
+    alert(`${name} already has a "${newRole}" entry on ${date}. Can't change role \u2014 that would create a duplicate row.`);
+    renderAll();
+    return;
+  }
+  const row = schedule.find(r => r.key === oldKey);
+  if(!row) return;
+  row.role = newRole;
+  row.key = newKey;
+  if(attendance[oldKey]){
+    attendance[newKey] = attendance[oldKey];
+    delete attendance[oldKey];
+  }
+  save();
+  renderAll();
+  pushRoleUpdate(date, name, oldRole, newRole);
+}
+
+function pushRoleUpdate(date, name, oldRole, newRole){
+  if(!scriptUrl || !scriptSecret){
+    setAttendanceSyncStatus('Role changed locally only \u2014 add the Apps Script URL and secret above to also write this into the Sheet.', true);
+    return;
+  }
+  fetch(scriptUrl, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action: 'role_update', date, name, oldRole, newRole, secret: scriptSecret })
+  }).then(() => {
+    setAttendanceSyncStatus('Role change sent to Sheet. (Apps Script responses can\'t be read from here, so double-check the Sheet if unsure it landed.)');
+  }).catch(err => {
+    setAttendanceSyncStatus('Could not reach the Apps Script URL: ' + err.message, true);
+  });
 }
 
 function renderLedger(data){
@@ -1094,6 +1150,12 @@ document.getElementById('attendanceBody').addEventListener('click', function(e){
   const btn = e.target.closest('.status-btn');
   if(!btn) return;
   setStatus(btn.dataset.key, btn.dataset.date, btn.dataset.name, btn.dataset.role, btn.dataset.status);
+});
+
+document.getElementById('attendanceBody').addEventListener('change', function(e){
+  const sel = e.target.closest('.role-select');
+  if(!sel) return;
+  changeRole(sel.dataset.key, sel.dataset.date, sel.dataset.name, sel.dataset.oldrole, sel.value);
 });
 
 document.getElementById('editorsBody').addEventListener('click', function(e){
