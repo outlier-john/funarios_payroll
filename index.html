@@ -14,12 +14,14 @@
     --panel:#151310;
     --panel-2:#1C1914;
     --line:#2E2A22;
-    --gold:#D4AF37;
-    --gold-dim:#8A6F24;
-    --rust:#B4331F;
+    --brand-red:#E8342E;
+    --brand-red-dim:#8F211D;
+    --brand-blue:#3B5BFF;
+    --brand-blue-dim:#25348F;
+    --brand-green:#22C55E;
     --cream:#F1EDE4;
     --muted:#8A8378;
-    --green:#6B8F5A;
+    --green:#22C55E;
     --red:#C2493A;
     --outlier-orange:#FB5331;
   }
@@ -32,9 +34,10 @@
   button{font-family:'Inter',sans-serif;cursor:pointer;}
 
   header{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:24px;flex-wrap:wrap;gap:16px;}
-  .brand{display:flex;align-items:baseline;gap:12px;}
-  .brand h1{font-size:38px;margin:0;color:var(--gold);line-height:1;}
-  .brand .tag{background:var(--rust);color:var(--cream);font-size:11px;letter-spacing:0.12em;text-transform:uppercase;padding:4px 8px;border-radius:2px;}
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand-logo{height:44px;width:44px;object-fit:contain;}
+  .brand h1{font-size:38px;margin:0;color:var(--brand-red);line-height:1;}
+  .brand .tag{background:var(--brand-blue);color:var(--cream);font-size:11px;letter-spacing:0.12em;text-transform:uppercase;padding:4px 8px;border-radius:2px;}
   .by-line{font-size:11px;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;display:flex;align-items:center;gap:6px;}
   .by-line img{height:16px;width:16px;object-fit:contain;}
   .by-line b{color:var(--outlier-orange);}
@@ -46,20 +49,43 @@
 
   .month-toggle{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden;}
   .month-toggle button{background:transparent;border:none;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:13px;padding:9px 14px;transition:background .15s,color .15s;}
-  .month-toggle button.active{background:var(--gold);color:#1A1508;font-weight:600;}
+  .month-toggle button.active{background:var(--brand-red);color:#FFFFFF;font-weight:600;}
   .month-toggle button:not(.active):hover{color:var(--cream);}
   .month-toggle .empty{padding:9px 14px;color:var(--muted);font-size:12px;}
+
+  .view-tabs{display:flex;gap:8px;margin-bottom:24px;border-bottom:1px solid var(--line);}
+  .view-tab{background:transparent;border:none;border-bottom:2px solid transparent;color:var(--muted);font-size:13px;font-weight:600;padding:10px 4px;margin-right:20px;letter-spacing:0.02em;}
+  .view-tab:hover{color:var(--cream);}
+  .view-tab.active{color:var(--brand-red);border-bottom-color:var(--brand-red);}
+
+  .checklist{display:flex;flex-direction:column;gap:10px;margin:14px 0;}
+  .checklist label{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--cream);cursor:pointer;}
+  .checklist input[type=checkbox]{width:17px;height:17px;accent-color:var(--brand-green);cursor:pointer;}
+
+  .submission-card{border:1px solid var(--line);border-radius:6px;padding:16px;margin-bottom:12px;}
+  .submission-head{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
+  .submission-head .who{font-size:14px;font-weight:600;}
+  .submission-head .video{font-size:13px;color:var(--muted);margin-top:2px;}
+  .submission-dates{font-size:12px;color:var(--muted);font-family:'IBM Plex Mono',monospace;}
+  .submission-checks{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0;}
+  .check-pill{font-size:11px;padding:3px 8px;border-radius:3px;background:rgba(34,197,94,0.15);color:var(--brand-green);}
+  .check-pill.missing{background:rgba(194,73,58,0.15);color:var(--red);}
+  .submission-actions{display:flex;gap:8px;margin-top:10px;}
+  .btn.approve{background:var(--brand-green);color:#0B0A08;}
+  .btn.approve:hover{background:#39D874;}
+  .btn.reject{background:transparent;border:1px solid var(--red);color:var(--red);}
+  .btn.reject:hover{background:rgba(194,73,58,0.1);}
 
   .card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:24px;margin-bottom:20px;}
 
   .empty-state{text-align:center;padding:48px 24px;}
-  .empty-state .display{font-size:32px;color:var(--gold);margin-bottom:8px;}
+  .empty-state .display{font-size:32px;color:var(--brand-red);margin-bottom:8px;}
   .empty-state p{color:var(--muted);font-size:14px;max-width:420px;margin:0 auto 20px;line-height:1.6;}
 
-  .btn{background:var(--gold);color:#1A1508;border:none;padding:11px 20px;border-radius:5px;font-weight:600;font-size:13px;}
-  .btn:hover{background:#E3C158;}
+  .btn{background:var(--brand-red);color:#FFFFFF;border:none;padding:11px 20px;border-radius:5px;font-weight:600;font-size:13px;}
+  .btn:hover{background:#F04A43;}
   .btn.secondary{background:transparent;border:1px solid var(--line);color:var(--cream);}
-  .btn.secondary:hover{border-color:var(--gold-dim);}
+  .btn.secondary:hover{border-color:var(--brand-red-dim);}
   .btn.small{padding:6px 12px;font-size:12px;}
   .btn:disabled{opacity:0.4;cursor:not-allowed;}
 
@@ -67,7 +93,7 @@
 
   .hero{position:relative;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px;}
   .hero-label{font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
-  .hero-total{font-size:60px;color:var(--gold);line-height:1;}
+  .hero-total{font-size:60px;color:var(--brand-red);line-height:1;}
   .hero-sub{color:var(--muted);font-size:13px;margin-top:8px;}
   .stamp{border:2px solid var(--green);color:var(--green);font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:0.1em;padding:7px 16px;border-radius:4px;transform:rotate(-6deg);opacity:0.9;white-space:nowrap;}
   .stamp.warn{border-color:var(--red);color:var(--red);}
@@ -84,14 +110,14 @@
 
   .day-group{border:1px solid var(--line);border-radius:6px;margin-bottom:12px;overflow:hidden;}
   .day-head{background:var(--panel-2);padding:10px 16px;font-size:13px;display:flex;justify-content:space-between;align-items:center;}
-  .day-head .date{font-family:'IBM Plex Mono',monospace;color:var(--gold);}
+  .day-head .date{font-family:'IBM Plex Mono',monospace;color:var(--brand-red);}
   .day-head .count{color:var(--muted);font-size:12px;}
   .att-row{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-top:1px solid var(--line);flex-wrap:wrap;gap:8px;}
   .att-who{font-size:13px;}
   .att-who .role{color:var(--muted);font-size:11px;margin-left:6px;}
   .role-select{background:var(--panel-2);border:1px solid var(--line);color:var(--muted);font-size:11px;border-radius:4px;padding:3px 6px;margin-left:8px;font-family:'Inter',sans-serif;}
-  .role-select:hover{border-color:var(--gold-dim);color:var(--cream);}
-  .role-select:focus{outline:none;border-color:var(--gold);color:var(--cream);}
+  .role-select:hover{border-color:var(--brand-red-dim);color:var(--cream);}
+  .role-select:focus{outline:none;border-color:var(--brand-red);color:var(--cream);}
   .att-actions{display:flex;gap:6px;}
   .status-btn{border:1px solid var(--line);background:transparent;color:var(--muted);font-size:11px;padding:5px 10px;border-radius:4px;}
   .status-btn.full.on{background:var(--green);border-color:var(--green);color:#0B0A08;font-weight:600;}
@@ -110,7 +136,7 @@
   .editor-head{background:var(--panel-2);padding:10px 16px;display:flex;justify-content:space-between;align-items:center;}
   .editor-head .name{font-size:14px;font-weight:600;}
   .editor-head .stats{font-size:12px;color:var(--muted);}
-  .editor-head .total{font-family:'IBM Plex Mono',monospace;color:var(--gold);font-weight:600;}
+  .editor-head .total{font-family:'IBM Plex Mono',monospace;color:var(--brand-red);font-weight:600;}
   .video-row{display:flex;justify-content:space-between;align-items:center;padding:9px 16px;border-top:1px solid var(--line);font-size:13px;}
   .video-row .title{flex:1;}
   .video-row .approved{font-size:11px;padding:2px 8px;border-radius:3px;margin-left:8px;}
@@ -133,6 +159,7 @@
   <header>
     <div>
       <div class="brand">
+        <img src="funarios-logo.png" alt="" class="brand-logo">
         <h1 class="display">FUNARIOS</h1>
         <span class="tag">Payroll</span>
       </div>
@@ -140,6 +167,13 @@
     </div>
     <div class="month-toggle" id="monthToggle"><span class="empty">Import a schedule to get started</span></div>
   </header>
+
+  <nav class="view-tabs">
+    <button class="view-tab active" id="tabPayroll" onclick="switchView('payroll')">Payroll Dashboard</button>
+    <button class="view-tab" id="tabSubmissions" onclick="switchView('submissions')">Editor Submissions</button>
+  </nav>
+
+  <div id="payrollView">
 
   <div class="card" id="sourceCard">
     <h2 class="section-title">Data source &mdash; Schedule (read)</h2>
@@ -277,6 +311,66 @@
 
   </div>
 
+  </div>
+
+  <div id="submissionsView" style="display:none;">
+
+    <div class="card" id="submissionsSourceCard">
+      <h2 class="section-title">Data source &mdash; Editor Submissions</h2>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 12px;line-height:1.6;">
+        Published-CSV link for the <b style="color:var(--cream)">Editor_Submissions</b> tab, so pending submissions
+        made from another device show up here too. Uses the same Apps Script URL/secret set up on the Payroll tab.
+      </p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <input id="submissionsUrl" type="text" placeholder="Editor_Submissions published CSV link"
+          style="flex:1;min-width:240px;background:var(--panel-2);border:1px solid var(--line);color:var(--cream);border-radius:5px;padding:9px 12px;font-size:13px;font-family:'IBM Plex Mono',monospace;">
+        <button class="btn small" onclick="saveAndFetchSubmissionsUrl()">Save &amp; sync</button>
+        <button class="btn secondary small" onclick="fetchSubmissionsFromUrl(true)">Refresh now</button>
+      </div>
+      <div id="submissionsSyncStatus" style="font-size:12px;color:var(--muted);margin-top:10px;"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title">Submit a completed edit</h2>
+      <div style="display:flex;flex-direction:column;gap:10px;max-width:420px;">
+        <input id="subEditorName" type="text" placeholder="Your name"
+          style="background:var(--panel-2);border:1px solid var(--line);color:var(--cream);border-radius:5px;padding:9px 12px;font-size:13px;">
+        <input id="subVideoTitle" type="text" placeholder="Video title"
+          style="background:var(--panel-2);border:1px solid var(--line);color:var(--cream);border-radius:5px;padding:9px 12px;font-size:13px;">
+        <div>
+          <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;">Date assigned</label>
+          <input id="subDateAssigned" type="date"
+            style="width:100%;margin-top:4px;background:var(--panel-2);border:1px solid var(--line);color:var(--cream);border-radius:5px;padding:9px 12px;font-size:13px;font-family:'IBM Plex Mono',monospace;">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;">Date completed</label>
+          <input id="subDateCompleted" type="date"
+            style="width:100%;margin-top:4px;background:var(--panel-2);border:1px solid var(--line);color:var(--cream);border-radius:5px;padding:9px 12px;font-size:13px;font-family:'IBM Plex Mono',monospace;">
+        </div>
+
+        <div class="checklist" id="subChecklist">
+          <label><input type="checkbox" data-check="trailerH"> Trailer submitted &mdash; horizontal cut</label>
+          <label><input type="checkbox" data-check="trailerV"> Trailer submitted &mdash; vertical cut</label>
+          <label><input type="checkbox" data-check="thumbH"> Thumbnail &mdash; horizontal</label>
+          <label><input type="checkbox" data-check="thumbV"> Thumbnail &mdash; vertical</label>
+          <label><input type="checkbox" data-check="titleH"> Title card/title screen &mdash; horizontal</label>
+          <label><input type="checkbox" data-check="titleV"> Title card/title screen &mdash; vertical</label>
+        </div>
+
+        <button class="btn" onclick="submitEditorForm()">Submit</button>
+        <div id="submitFormStatus" style="font-size:12px;color:var(--muted);"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title">Pending review</h2>
+      <div id="pendingSubmissionsBody">
+        <p style="font-size:13px;color:var(--muted);">No pending submissions.</p>
+      </div>
+    </div>
+
+  </div>
+
   <input type="file" id="fileInput" accept=".csv">
 
   <footer>
@@ -309,6 +403,7 @@ let attendance = JSON.parse(localStorage.getItem('funarios_attendance') || '{}')
 let roleRates = JSON.parse(localStorage.getItem('funarios_roleRates') || JSON.stringify(DEFAULT_ROLE_RATES));
 let peopleRates = JSON.parse(localStorage.getItem('funarios_peopleRates') || '[]');
 let editorDeliverables = JSON.parse(localStorage.getItem('funarios_editorDeliverables') || '[]');
+let editorSubmissions = JSON.parse(localStorage.getItem('funarios_editorSubmissions') || '[]');
 let selectedMonth = localStorage.getItem('funarios_selectedMonth') || null;
 
 function save(){
@@ -317,10 +412,159 @@ function save(){
   localStorage.setItem('funarios_roleRates', JSON.stringify(roleRates));
   localStorage.setItem('funarios_peopleRates', JSON.stringify(peopleRates));
   localStorage.setItem('funarios_editorDeliverables', JSON.stringify(editorDeliverables));
+  localStorage.setItem('funarios_editorSubmissions', JSON.stringify(editorSubmissions));
   if(selectedMonth) localStorage.setItem('funarios_selectedMonth', selectedMonth);
 }
 
 function rowKey(date, name, role){ return date + '|' + name + '|' + role; }
+
+function submissionKey(editor, title, dateAssigned){ return editor + '|' + title + '|' + dateAssigned; }
+
+function switchView(view){
+  const payroll = view === 'payroll';
+  document.getElementById('payrollView').style.display = payroll ? 'block' : 'none';
+  document.getElementById('submissionsView').style.display = payroll ? 'none' : 'block';
+  document.getElementById('tabPayroll').classList.toggle('active', payroll);
+  document.getElementById('tabSubmissions').classList.toggle('active', !payroll);
+}
+
+const CHECKLIST_FIELDS = [
+  { key: 'trailerH', label: 'Trailer \u2014 horizontal' },
+  { key: 'trailerV', label: 'Trailer \u2014 vertical' },
+  { key: 'thumbH', label: 'Thumbnail \u2014 horizontal' },
+  { key: 'thumbV', label: 'Thumbnail \u2014 vertical' },
+  { key: 'titleH', label: 'Title card \u2014 horizontal' },
+  { key: 'titleV', label: 'Title card \u2014 vertical' }
+];
+
+function submitEditorForm(){
+  const statusEl = document.getElementById('submitFormStatus');
+  const editor = document.getElementById('subEditorName').value.trim();
+  const title = document.getElementById('subVideoTitle').value.trim();
+  const dateAssigned = document.getElementById('subDateAssigned').value;
+  const dateCompleted = document.getElementById('subDateCompleted').value;
+  const checks = {};
+  let allChecked = true;
+  CHECKLIST_FIELDS.forEach(f => {
+    const box = document.querySelector(`#subChecklist input[data-check="${f.key}"]`);
+    checks[f.key] = box.checked;
+    if(!box.checked) allChecked = false;
+  });
+
+  if(!editor || !title || !dateAssigned || !dateCompleted){
+    statusEl.textContent = 'Fill in your name, the video title, and both dates first.';
+    statusEl.style.color = 'var(--red)';
+    return;
+  }
+  if(!allChecked){
+    statusEl.textContent = 'Every checklist item needs to be checked before submitting.';
+    statusEl.style.color = 'var(--red)';
+    return;
+  }
+  const key = submissionKey(editor, title, dateAssigned);
+  if(editorSubmissions.find(s => s.key === key)){
+    statusEl.textContent = 'You already submitted this video with this assigned date.';
+    statusEl.style.color = 'var(--red)';
+    return;
+  }
+
+  const record = { key, editor, title, dateAssigned, dateCompleted, checks, status: 'Pending' };
+  editorSubmissions.push(record);
+  save();
+  renderPendingSubmissions();
+
+  document.getElementById('subEditorName').value = '';
+  document.getElementById('subVideoTitle').value = '';
+  document.getElementById('subDateAssigned').value = '';
+  document.getElementById('subDateCompleted').value = '';
+  CHECKLIST_FIELDS.forEach(f => { document.querySelector(`#subChecklist input[data-check="${f.key}"]`).checked = false; });
+
+  statusEl.textContent = 'Submitted locally.';
+  statusEl.style.color = 'var(--muted)';
+  if(!scriptUrl || !scriptSecret){
+    statusEl.textContent += ' Add the Apps Script URL and secret on the Payroll tab to also save this into the Sheet.';
+    statusEl.style.color = 'var(--red)';
+    return;
+  }
+  fetch(scriptUrl, {
+    method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action: 'submission_add', editor, title, dateAssigned, dateCompleted, checks, secret: scriptSecret })
+  }).then(() => {
+    statusEl.textContent = 'Submitted locally and sent to the Sheet.';
+  }).catch(err => {
+    statusEl.textContent = 'Submitted locally, but could not reach the Sheet: ' + err.message;
+    statusEl.style.color = 'var(--red)';
+  });
+}
+
+function renderPendingSubmissions(){
+  const body = document.getElementById('pendingSubmissionsBody');
+  const pending = editorSubmissions.filter(s => s.status === 'Pending');
+  if(pending.length === 0){
+    body.innerHTML = '<p style="font-size:13px;color:var(--muted);">No pending submissions.</p>';
+    return;
+  }
+  body.innerHTML = pending.map(s => `
+    <div class="submission-card">
+      <div class="submission-head">
+        <div>
+          <div class="who">${escapeHtml(s.editor)}</div>
+          <div class="video">${escapeHtml(s.title)}</div>
+        </div>
+        <div class="submission-dates">Assigned ${escapeHtml(s.dateAssigned)} &rarr; Completed ${escapeHtml(s.dateCompleted)}</div>
+      </div>
+      <div class="submission-checks">
+        ${CHECKLIST_FIELDS.map(f => `<span class="check-pill ${s.checks[f.key] ? '' : 'missing'}">${s.checks[f.key] ? '\u2713' : '\u2717'} ${f.label}</span>`).join('')}
+      </div>
+      <div class="submission-actions">
+        <button class="btn approve small" data-key="${escapeHtml(s.key)}" data-action="approve">Approve</button>
+        <button class="btn reject small" data-key="${escapeHtml(s.key)}" data-action="reject">Reject</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function approveSubmission(key){
+  const rec = editorSubmissions.find(s => s.key === key);
+  if(!rec) return;
+  rec.status = 'Approved';
+  editorSubmissions = editorSubmissions.filter(s => s.key !== key);
+  if(!editorDeliverables.find(e => e.editor === rec.editor && e.title === rec.title)){
+    editorDeliverables.push({ date: rec.dateCompleted, editor: rec.editor, title: rec.title, approved: false, payout: 0 });
+  }
+  save();
+  renderPendingSubmissions();
+  renderAll();
+  pushSubmissionReview(rec, 'submission_approve');
+}
+
+function rejectSubmission(key){
+  const rec = editorSubmissions.find(s => s.key === key);
+  if(!rec) return;
+  rec.status = 'Rejected';
+  editorSubmissions = editorSubmissions.filter(s => s.key !== key);
+  save();
+  renderPendingSubmissions();
+  pushSubmissionReview(rec, 'submission_reject');
+}
+
+function pushSubmissionReview(rec, action){
+  if(!scriptUrl || !scriptSecret){
+    setSubmissionsSyncStatus('Reviewed locally only \u2014 add the Apps Script URL and secret on the Payroll tab to also write this into the Sheet.', true);
+    return;
+  }
+  fetch(scriptUrl, {
+    method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action, editor: rec.editor, title: rec.title, dateAssigned: rec.dateAssigned, dateCompleted: rec.dateCompleted, secret: scriptSecret })
+  }).catch(() => {});
+}
+
+document.getElementById('pendingSubmissionsBody').addEventListener('click', function(e){
+  const btn = e.target.closest('button[data-action]');
+  if(!btn) return;
+  if(btn.dataset.action === 'approve') approveSubmission(btn.dataset.key);
+  if(btn.dataset.action === 'reject') rejectSubmission(btn.dataset.key);
+});
 
 function payPeriodInfo(dateStr){
   const parts = (dateStr || '').split('-').map(Number);
@@ -589,6 +833,85 @@ function pushAttendanceUpdate(r, status, partialAmt){
 }
 
 let editorUrl = localStorage.getItem('funarios_editorUrl') || DEFAULT_EDITOR_URL;
+let submissionsUrl = localStorage.getItem('funarios_submissionsUrl') || '';
+
+function setSubmissionsSyncStatus(msg, isError){
+  const el = document.getElementById('submissionsSyncStatus');
+  el.textContent = msg;
+  el.style.color = isError ? 'var(--red)' : 'var(--muted)';
+}
+
+function saveAndFetchSubmissionsUrl(){
+  const val = document.getElementById('submissionsUrl').value.trim();
+  if(!val){ setSubmissionsSyncStatus('Paste a published CSV link first.', true); return; }
+  submissionsUrl = val;
+  localStorage.setItem('funarios_submissionsUrl', submissionsUrl);
+  fetchSubmissionsFromUrl(true);
+}
+
+function detectSubmissionColumns(fields){
+  const norm = f => (f || '').toLowerCase().trim();
+  const find = (keywords) => { for(const f of fields){ if(keywords.some(k => norm(f).includes(k))) return f; } return null; };
+  return {
+    editorCol: find(['editor', 'name']),
+    titleCol: find(['title', 'video']),
+    assignedCol: find(['assigned']),
+    completedCol: find(['completed']),
+    statusCol: find(['status']),
+    trailerHCol: find(['trailer h', 'trailer horizontal']),
+    trailerVCol: find(['trailer v', 'trailer vertical']),
+    thumbHCol: find(['thumbnail h', 'thumb h']),
+    thumbVCol: find(['thumbnail v', 'thumb v']),
+    titleHCol: find(['title card h', 'title h']),
+    titleVCol: find(['title card v', 'title v'])
+  };
+}
+
+function fetchSubmissionsFromUrl(manual){
+  if(!submissionsUrl){ if(manual) setSubmissionsSyncStatus('No link saved yet.', true); return; }
+  setSubmissionsSyncStatus('Syncing\u2026');
+  fetch(submissionsUrl)
+    .then(res => { if(!res.ok) throw new Error('Server returned ' + res.status); return res.text(); })
+    .then(text => {
+      const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+      const cols = detectSubmissionColumns(parsed.meta.fields || []);
+      if(!cols.editorCol || !cols.titleCol || !cols.assignedCol){
+        setSubmissionsSyncStatus(`Couldn't find the right columns. Found: ${(parsed.meta.fields||[]).join(', ')}`, true);
+        return;
+      }
+      let added = 0;
+      parsed.data.forEach(row => {
+        const editor = (row[cols.editorCol] || '').trim();
+        const title = (row[cols.titleCol] || '').trim();
+        const dateAssigned = (row[cols.assignedCol] || '').trim();
+        if(!editor || !title || !dateAssigned) return;
+        const status = cols.statusCol ? ((row[cols.statusCol] || 'Pending').trim() || 'Pending') : 'Pending';
+        if(status !== 'Pending') return;
+        const key = submissionKey(editor, title, dateAssigned);
+        if(editorSubmissions.find(s => s.key === key)) return;
+        const yes = v => (v || '').toString().trim().toLowerCase() === 'y' || (v || '').toString().trim().toLowerCase() === 'yes';
+        editorSubmissions.push({
+          key, editor, title, dateAssigned,
+          dateCompleted: cols.completedCol ? (row[cols.completedCol] || '').trim() : '',
+          checks: {
+            trailerH: cols.trailerHCol ? yes(row[cols.trailerHCol]) : false,
+            trailerV: cols.trailerVCol ? yes(row[cols.trailerVCol]) : false,
+            thumbH: cols.thumbHCol ? yes(row[cols.thumbHCol]) : false,
+            thumbV: cols.thumbVCol ? yes(row[cols.thumbVCol]) : false,
+            titleH: cols.titleHCol ? yes(row[cols.titleHCol]) : false,
+            titleV: cols.titleVCol ? yes(row[cols.titleVCol]) : false
+          },
+          status: 'Pending'
+        });
+        added++;
+      });
+      save();
+      renderPendingSubmissions();
+      const now = new Date().toLocaleString();
+      setSubmissionsSyncStatus(`Last synced ${now} \u2014 ${added} new pending submission${added===1?'':'s'} pulled from the Sheet.`);
+    })
+    .catch(err => { setSubmissionsSyncStatus('Sync failed: ' + err.message, true); });
+}
 
 function setEditorSyncStatus(msg, isError){
   const el = document.getElementById('editorSyncStatus');
@@ -731,6 +1054,8 @@ function fetchPeopleRatesFromUrl(manual){
 
 if(peopleRatesUrl){ document.getElementById('peopleRatesUrl').value = peopleRatesUrl; fetchPeopleRatesFromUrl(false); }
 if(editorUrl){ document.getElementById('editorUrl').value = editorUrl; fetchEditorsFromUrl(false); }
+if(submissionsUrl){ document.getElementById('submissionsUrl').value = submissionsUrl; fetchSubmissionsFromUrl(false); }
+renderPendingSubmissions();
 
 function getRate(name, role){
   const override = peopleRates.find(p => p.name === name && p.role === role && p.active !== false);
@@ -837,7 +1162,7 @@ function renderChart(data){
     type: 'bar',
     data: {
       labels: sorted.map(s => s[0]),
-      datasets: [{ data: sorted.map(s => s[1]), backgroundColor: '#D4AF37', borderRadius: 3, maxBarThickness: 26 }]
+      datasets: [{ data: sorted.map(s => s[1]), backgroundColor: '#E8342E', borderRadius: 3, maxBarThickness: 26 }]
     },
     options: {
       indexAxis: 'y',
