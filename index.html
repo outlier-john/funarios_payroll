@@ -76,6 +76,13 @@
   .btn.reject{background:transparent;border:1px solid var(--red);color:var(--red);}
   .btn.reject:hover{background:rgba(194,73,58,0.1);}
 
+  .lock-card{max-width:360px;margin:0 auto;text-align:center;padding:40px 24px;}
+  .lock-card .display{font-size:24px;color:var(--brand-red);margin-bottom:10px;}
+  .lock-card p{font-size:13px;color:var(--muted);margin-bottom:18px;}
+  .lock-card input{width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--cream);border-radius:5px;padding:10px 12px;font-size:14px;text-align:center;margin-bottom:12px;}
+  .lock-card .btn{width:100%;}
+  .lock-status{font-size:12px;color:var(--red);margin-top:10px;min-height:16px;}
+
   .card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:24px;margin-bottom:20px;}
 
   .empty-state{text-align:center;padding:48px 24px;}
@@ -175,13 +182,23 @@
 
   <div id="payrollView">
 
+  <div id="payrollLock" class="card lock-card">
+    <div class="display">Locked</div>
+    <p>Enter the password to view schedule, attendance, rates, and payroll data.</p>
+    <input id="payrollPasswordInput" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')unlockGate()">
+    <button class="btn" onclick="unlockGate()">Unlock</button>
+    <div class="lock-status" id="payrollLockStatus"></div>
+  </div>
+
+  <div id="payrollContent" style="display:none;">
+
   <div class="card" id="sourceCard">
     <h2 class="section-title">Data source &mdash; Schedule (read)</h2>
     <p style="font-size:13px;color:var(--muted);margin:0 0 12px;line-height:1.6;">
       Published-CSV link for the <b style="color:var(--cream)">Schedule</b> tab (File &rarr; Share &rarr; Publish to web &rarr; pick Schedule &rarr; format CSV).
     </p>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      <input id="sheetUrl" type="text" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv"
+      <input id="sheetUrl" type="password" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv"
         style="flex:1;min-width:240px;background:var(--panel-2);border:1px solid var(--line);color:var(--cream);border-radius:5px;padding:9px 12px;font-size:13px;font-family:'IBM Plex Mono',monospace;">
       <button class="btn small" onclick="saveAndFetchUrl()">Save &amp; sync</button>
       <button class="btn secondary small" onclick="fetchFromUrl(true)">Refresh now</button>
@@ -200,11 +217,11 @@
       the Sheet too). See the setup guide for how to create these.
     </p>
     <div style="display:flex;flex-direction:column;gap:8px;">
-      <input id="attendanceUrl" type="text" placeholder="Attendance_Log published CSV link"
+      <input id="attendanceUrl" type="password" placeholder="Attendance_Log published CSV link"
         style="background:var(--panel-2);border:1px solid var(--line);color:var(--cream);border-radius:5px;padding:9px 12px;font-size:13px;font-family:'IBM Plex Mono',monospace;">
-      <input id="scriptUrl" type="text" placeholder="Apps Script Web App URL (ends in /exec)"
+      <input id="scriptUrl" type="password" placeholder="Apps Script Web App URL (ends in /exec)"
         style="background:var(--panel-2);border:1px solid var(--line);color:var(--cream);border-radius:5px;padding:9px 12px;font-size:13px;font-family:'IBM Plex Mono',monospace;">
-      <input id="scriptSecret" type="text" placeholder="Sync secret (must match the one in the Apps Script)"
+      <input id="scriptSecret" type="password" placeholder="Sync secret (must match the one in the Apps Script)"
         style="background:var(--panel-2);border:1px solid var(--line);color:var(--cream);border-radius:5px;padding:9px 12px;font-size:13px;font-family:'IBM Plex Mono',monospace;">
     </div>
     <div style="margin-top:10px;">
@@ -220,7 +237,7 @@
       delivered, whether Lonnie approved them, and what they're owed.
     </p>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      <input id="editorUrl" type="text" placeholder="Editor_Deliverables published CSV link"
+      <input id="editorUrl" type="password" placeholder="Editor_Deliverables published CSV link"
         style="flex:1;min-width:240px;background:var(--panel-2);border:1px solid var(--line);color:var(--cream);border-radius:5px;padding:9px 12px;font-size:13px;font-family:'IBM Plex Mono',monospace;">
       <button class="btn small" onclick="saveAndFetchEditorUrl()">Save &amp; sync</button>
       <button class="btn secondary small" onclick="fetchEditorsFromUrl(true)">Refresh now</button>
@@ -235,7 +252,7 @@
       else with a custom rate will always show $0 on the dashboard.
     </p>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      <input id="peopleRatesUrl" type="text" placeholder="People_Rates published CSV link"
+      <input id="peopleRatesUrl" type="password" placeholder="People_Rates published CSV link"
         style="flex:1;min-width:240px;background:var(--panel-2);border:1px solid var(--line);color:var(--cream);border-radius:5px;padding:9px 12px;font-size:13px;font-family:'IBM Plex Mono',monospace;">
       <button class="btn small" onclick="saveAndFetchPeopleRatesUrl()">Save &amp; sync</button>
       <button class="btn secondary small" onclick="fetchPeopleRatesFromUrl(true)">Refresh now</button>
@@ -313,6 +330,8 @@
 
   </div>
 
+  </div>
+
   <div id="submissionsView" style="display:none;">
 
     <div class="card" id="submissionsSourceCard">
@@ -322,7 +341,7 @@
         made from another device show up here too. Uses the same Apps Script URL/secret set up on the Payroll tab.
       </p>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <input id="submissionsUrl" type="text" placeholder="Editor_Submissions published CSV link"
+        <input id="submissionsUrl" type="password" placeholder="Editor_Submissions published CSV link"
           style="flex:1;min-width:240px;background:var(--panel-2);border:1px solid var(--line);color:var(--cream);border-radius:5px;padding:9px 12px;font-size:13px;font-family:'IBM Plex Mono',monospace;">
         <button class="btn small" onclick="saveAndFetchSubmissionsUrl()">Save &amp; sync</button>
         <button class="btn secondary small" onclick="fetchSubmissionsFromUrl(true)">Refresh now</button>
@@ -364,7 +383,14 @@
 
     <div class="card">
       <h2 class="section-title">Pending review</h2>
-      <div id="pendingSubmissionsBody">
+      <div id="pendingLock" class="lock-card" style="padding:24px;">
+        <div class="display" style="font-size:18px;">Locked</div>
+        <p>Enter the password to view and review pending submissions.</p>
+        <input id="pendingPasswordInput" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')unlockGate()">
+        <button class="btn" onclick="unlockGate()">Unlock</button>
+        <div class="lock-status" id="pendingLockStatus"></div>
+      </div>
+      <div id="pendingSubmissionsBody" style="display:none;">
         <p style="font-size:13px;color:var(--muted);">No pending submissions.</p>
       </div>
     </div>
@@ -386,7 +412,7 @@
 // The secret is intentionally NOT included here — see the "Data source — Attendance" box.
 const DEFAULT_SCHEDULE_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTncuOTEJSVGmRtcB9HZfoG4j_cHL4hGWz78OuIZ7xeHpwBxvvG7I63pla_RiEztB2YedjG0VUw2N8I/pub?gid=733436559&single=true&output=csv";
 const DEFAULT_ATTENDANCE_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTncuOTEJSVGmRtcB9HZfoG4j_cHL4hGWz78OuIZ7xeHpwBxvvG7I63pla_RiEztB2YedjG0VUw2N8I/pub?gid=1794526141&single=true&output=csv";
-const DEFAULT_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxElDVycF39_gGV6Z-CWD7SpbUyr54nunFuZCm4COQxnZOKiRn6aZMnECSlKl3tGm0/exec";
+const DEFAULT_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxthZAQwYgtSZhCA3zevFWVoFGa08fZGfld3HdqX3oLbldHreaZSn-UN0CZYQ1dsWE/exec";
 const DEFAULT_EDITOR_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTncuOTEJSVGmRtcB9HZfoG4j_cHL4hGWz78OuIZ7xeHpwBxvvG7I63pla_RiEztB2YedjG0VUw2N8I/pub?gid=157299368&single=true&output=csv";
 const DEFAULT_PEOPLE_RATES_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTncuOTEJSVGmRtcB9HZfoG4j_cHL4hGWz78OuIZ7xeHpwBxvvG7I63pla_RiEztB2YedjG0VUw2N8I/pub?gid=552775998&single=true&output=csv";
 
@@ -426,6 +452,48 @@ function switchView(view){
   document.getElementById('submissionsView').style.display = payroll ? 'none' : 'block';
   document.getElementById('tabPayroll').classList.toggle('active', payroll);
   document.getElementById('tabSubmissions').classList.toggle('active', !payroll);
+}
+
+// ---- Password gate ----
+// Default password is "Funarios2026!" -- change it by generating a new SHA-256 hex hash and
+// replacing GATE_PASSWORD_HASH below. In a browser console:
+//   crypto.subtle.digest('SHA-256', new TextEncoder().encode('yourNewPassword')).then(buf =>
+//     console.log(Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('')))
+// NOTE: this is a client-side-only gate. Anyone who views this page's source can find this hash
+// and, with enough effort, could brute-force a weak password against it. It deters casual access,
+// it is not real security.
+const GATE_PASSWORD_HASH = "799d23bb286093a542a67c0567298c5a67155637e7f85ff015d0f0decc1d192";
+
+async function sha256Hex(text){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function isGateUnlocked(){
+  return localStorage.getItem('funarios_gate_unlocked') === '1';
+}
+
+function applyGateState(){
+  const unlocked = isGateUnlocked();
+  document.getElementById('payrollLock').style.display = unlocked ? 'none' : 'block';
+  document.getElementById('payrollContent').style.display = unlocked ? 'block' : 'none';
+  document.getElementById('pendingLock').style.display = unlocked ? 'none' : 'block';
+  document.getElementById('pendingSubmissionsBody').style.display = unlocked ? 'block' : 'none';
+  if(unlocked) renderAll();
+}
+
+async function unlockGate(){
+  const input = document.getElementById('payrollPasswordInput').value
+    || document.getElementById('pendingPasswordInput').value;
+  const statusEls = [document.getElementById('payrollLockStatus'), document.getElementById('pendingLockStatus')];
+  const hash = await sha256Hex(input || '');
+  if(hash === GATE_PASSWORD_HASH){
+    localStorage.setItem('funarios_gate_unlocked', '1');
+    statusEls.forEach(el => el.textContent = '');
+    applyGateState();
+  } else {
+    statusEls.forEach(el => el.textContent = 'Incorrect password.');
+  }
 }
 
 const CHECKLIST_FIELDS = [
@@ -1490,6 +1558,7 @@ document.getElementById('editorsBody').addEventListener('click', function(e){
 });
 
 renderAll();
+applyGateState();
 </script>
 </body>
 </html>
