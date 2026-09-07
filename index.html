@@ -415,6 +415,7 @@ const DEFAULT_ATTENDANCE_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1
 const DEFAULT_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxthZAQwYgtSZhCA3zevFWVoFGa08fZGfld3HdqX3oLbldHreaZSn-UN0CZYQ1dsWE/exec";
 const DEFAULT_EDITOR_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTncuOTEJSVGmRtcB9HZfoG4j_cHL4hGWz78OuIZ7xeHpwBxvvG7I63pla_RiEztB2YedjG0VUw2N8I/pub?gid=157299368&single=true&output=csv";
 const DEFAULT_PEOPLE_RATES_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTncuOTEJSVGmRtcB9HZfoG4j_cHL4hGWz78OuIZ7xeHpwBxvvG7I63pla_RiEztB2YedjG0VUw2N8I/pub?gid=552775998&single=true&output=csv";
+const DEFAULT_SUBMISSIONS_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTncuOTEJSVGmRtcB9HZfoG4j_cHL4hGWz78OuIZ7xeHpwBxvvG7I63pla_RiEztB2YedjG0VUw2N8I/pub?gid=1668858449&single=true&output=csv";
 
 const DEFAULT_ROLE_RATES = {
   "Lead Actor": 150,
@@ -901,7 +902,7 @@ function pushAttendanceUpdate(r, status, partialAmt){
 }
 
 let editorUrl = localStorage.getItem('funarios_editorUrl') || DEFAULT_EDITOR_URL;
-let submissionsUrl = localStorage.getItem('funarios_submissionsUrl') || '';
+let submissionsUrl = localStorage.getItem('funarios_submissionsUrl') || DEFAULT_SUBMISSIONS_URL;
 
 function setSubmissionsSyncStatus(msg, isError){
   const el = document.getElementById('submissionsSyncStatus');
