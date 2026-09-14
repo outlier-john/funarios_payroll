@@ -739,7 +739,7 @@ function mergeScheduleRows(rows, fields){
       `something with "name" in it, and something with "role" in it. Found columns: ${(fields||[]).join(', ') || 'none'}.`
     };
   }
-  let added = 0, skipped = 0, badDates = 0;
+  let added = 0, skipped = 0, badDates = 0, roleConflicts = 0;
   rows.forEach(row => {
     const name = (row[cols.nameCol] || '').trim();
     const role = (row[cols.roleCol] || '').trim();
@@ -754,10 +754,19 @@ function mergeScheduleRows(rows, fields){
       skipped++;
       return;
     }
+    // Someone already has a DIFFERENT role logged for this person on this date -- most likely
+    // this incoming row is a stale copy from before a role change (edited here, sync hadn't
+    // caught up in the Sheet yet). Skip it instead of silently creating a duplicate; if it's a
+    // genuine second role for the same day, add it manually via a CSV import instead.
+    const sameDayDifferentRole = schedule.find(r => r.date === date && r.name === name && r.role !== role);
+    if(sameDayDifferentRole){
+      roleConflicts++;
+      return;
+    }
     schedule.push({ key, date, name, role, project });
     added++;
   });
-  return { added, skipped, badDates, cols };
+  return { added, skipped, badDates, roleConflicts, cols };
 }
 
 document.getElementById('fileInput').addEventListener('change', function(e){
@@ -820,7 +829,8 @@ function fetchFromUrl(manual){
       save();
       renderAll();
       const now = new Date().toLocaleString();
-      setSyncStatus(`Last synced ${now} \u2014 ${r.added} new row${r.added===1?'':'s'} added, ${r.skipped} already had data.`);
+      const conflictNote = r.roleConflicts ? ` \u2014 ${r.roleConflicts} skipped due to a role already changed for that person/day (check the Sheet if that's unexpected)` : '';
+      setSyncStatus(`Last synced ${now} \u2014 ${r.added} new row${r.added===1?'':'s'} added, ${r.skipped} already had data.${conflictNote}`);
     })
     .catch(err => {
       setSyncStatus('Sync failed: ' + err.message + '. Check the link is published as CSV and try again.', true);
