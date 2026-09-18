@@ -1041,7 +1041,7 @@ function mergeEditorRows(rows, fields){
   if(!cols.dateCol || !cols.editorCol || !cols.titleCol){
     return { error: `Couldn't find the right columns. Looking for a date, an editor name, and a video title. Found: ${(fields||[]).join(', ') || 'none'}.` };
   }
-  editorDeliverables = [];
+  let added = 0;
   rows.forEach(row => {
     const editor = (row[cols.editorCol] || '').trim();
     const title = (row[cols.titleCol] || '').trim();
@@ -1051,9 +1051,23 @@ function mergeEditorRows(rows, fields){
     const approvedRaw = cols.approvedCol ? (row[cols.approvedCol] || '').trim().toLowerCase() : '';
     const approved = approvedRaw === 'y' || approvedRaw === 'yes';
     const payout = cols.payoutCol ? parseMoney(row[cols.payoutCol]) : 0;
+
+    const existing = editorDeliverables.find(e => e.editor === editor && e.title === title);
+    if(existing){
+      // Google's published-CSV link can lag the real Sheet by a couple of minutes, so a
+      // background poll can easily fetch a stale, pre-approval snapshot. Only let an incoming
+      // sync UPGRADE approved false->true (picking up someone else's approval); never let it
+      // silently revert an approval that's already showing true locally.
+      if(approved && !existing.approved){
+        existing.approved = true;
+        existing.payout = payout;
+      }
+      return;
+    }
     editorDeliverables.push({ date, editor, title, approved, payout });
+    added++;
   });
-  return { count: editorDeliverables.length };
+  return { count: editorDeliverables.length, added };
 }
 
 function fetchEditorsFromUrl(manual){
