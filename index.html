@@ -166,6 +166,30 @@
 
   footer{margin-top:8px;font-size:12px;color:var(--muted);line-height:1.6;}
   footer b{color:var(--cream);}
+  /* ---- Call Sheets tab ---- */
+  .cs-drop{border:2px dashed var(--line);border-radius:10px;padding:28px;text-align:center;color:var(--muted);font-size:13px;cursor:pointer;background:var(--panel-2);transition:border-color .15s;}
+  .cs-drop:hover,.cs-drop.drag{border-color:var(--brand-green);color:var(--cream);}
+  .cs-drop b{color:var(--cream);}
+  .cs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;}
+  .cs-field label{display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;}
+  .cs-input{width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--cream);border-radius:5px;padding:9px 12px;font-size:13px;font-family:inherit;}
+  .cs-input:focus{outline:none;border-color:var(--brand-green);}
+  .cs-table-wrap{overflow-x:auto;}
+  table.cs-table{width:100%;border-collapse:collapse;font-size:13px;min-width:720px;}
+  table.cs-table th{text-align:left;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:8px 8px;border-bottom:1px solid var(--line);}
+  table.cs-table td{padding:8px;border-bottom:1px solid var(--line);vertical-align:middle;}
+  table.cs-table tr.skipped td{opacity:.45;}
+  table.cs-table .cs-input{padding:7px 9px;}
+  .cs-badge{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:3px;white-space:nowrap;}
+  .cs-badge.found{background:rgba(30,163,78,.15);color:var(--brand-green-dim);}
+  .cs-badge.missing{background:rgba(232,52,46,.12);color:var(--red);}
+  .cs-badge.pending{background:rgba(59,91,255,.12);color:var(--brand-blue-dim);}
+  .cs-badge.skip{background:rgba(92,106,97,.15);color:var(--muted);}
+  .cs-summary{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-top:14px;}
+  .cs-summary b{color:var(--cream);}
+  .cs-warn{background:rgba(232,52,46,.08);border:1px solid rgba(232,52,46,.3);color:var(--brand-red-dim);border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:14px;}
+  .cs-x{background:none;border:none;color:var(--muted);font-size:18px;line-height:1;cursor:pointer;padding:0 4px;}
+  .cs-x:hover{color:var(--red);}
 </style>
 </head>
 <body>
@@ -186,6 +210,7 @@
   <nav class="view-tabs">
     <button class="view-tab active" id="tabPayroll" onclick="switchView('payroll')">Payroll Dashboard</button>
     <button class="view-tab" id="tabSubmissions" onclick="switchView('submissions')">Editor Submissions</button>
+    <button class="view-tab" id="tabCallsheets" onclick="switchView('callsheets')">Call Sheets</button>
   </nav>
 
   <div id="payrollView">
@@ -405,6 +430,120 @@
 
   </div>
 
+  <div id="callsheetView" style="display:none;">
+
+    <div id="callsheetLock" class="card lock-card">
+      <div class="display">Locked</div>
+      <p>Enter the password to upload call sheets.</p>
+      <input id="callsheetPasswordInput" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')unlockGate()">
+      <button class="btn" onclick="unlockGate()">Unlock</button>
+      <div class="lock-status" id="callsheetLockStatus"></div>
+    </div>
+
+    <div id="callsheetContent" style="display:none;">
+
+      <div class="card" style="padding:16px 24px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div id="csConnStatus" style="font-size:13px;"></div>
+          <button class="btn secondary small" onclick="csToggleSettings()">Connection settings</button>
+        </div>
+        <div id="csSettings" style="display:none;margin-top:14px;">
+          <div class="cs-grid">
+            <div class="cs-field" style="grid-column:1/-1;"><label>Call sheet script URL</label><input class="cs-input" id="csUrlInput" placeholder="https://script.google.com/macros/s/.../exec"></div>
+            <div class="cs-field" style="grid-column:1/-1;"><label>Secret key (saved in this browser only)</label><input class="cs-input" id="csSecretInput" type="password"></div>
+          </div>
+          <div class="toolbar"><button class="btn small" onclick="csSaveSettings()">Save &amp; connect</button></div>
+          <h2 class="section-title" style="margin-top:18px;">Sent with every call sheet</h2>
+          <div id="csStdAttach" style="font-size:13px;line-height:1.8;"></div>
+          <div class="toolbar">
+            <button class="btn secondary small" onclick="document.getElementById('csPayFile').click()">Upload Pay Packet</button>
+            <button class="btn secondary small" onclick="document.getElementById('csTalentFile').click()">Upload Talent Agreement</button>
+            <input type="file" id="csPayFile" accept=".pdf" style="display:none;" onchange="csUploadStd('pay', this.files[0])">
+            <input type="file" id="csTalentFile" accept=".pdf" style="display:none;" onchange="csUploadStd('talent', this.files[0])">
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="section-title">1. Upload call sheet</h2>
+        <div class="cs-drop" id="csDrop" onclick="document.getElementById('csFile').click()">
+          <b>Drop the call sheet PDF here</b> or click to choose a file
+        </div>
+        <input type="file" id="csFile" accept="application/pdf,.pdf" style="display:none;" onchange="csHandleFile(this.files[0])">
+        <div id="csStatus" style="font-size:12px;color:var(--muted);margin-top:10px;"></div>
+      </div>
+
+      <div id="csParsed" style="display:none;">
+
+        <div class="card">
+          <h2 class="section-title">2. Shoot details</h2>
+          <div id="csWarnings"></div>
+          <div class="cs-grid">
+            <div class="cs-field" style="grid-column:1/-1;"><label>Project (goes in the Project column)</label><input class="cs-input" id="csTitle"></div>
+            <div class="cs-field"><label>Shoot date</label><input class="cs-input" type="date" id="csDate" onchange="csCheckDate()"></div>
+            <div class="cs-field"><label>General call</label><input class="cs-input" id="csCall"></div>
+            <div class="cs-field"><label>Est. wrap</label><input class="cs-input" id="csWrap"></div>
+            <div class="cs-field" style="grid-column:1/-1;"><label>Location address</label><input class="cs-input" id="csLocation"></div>
+            <div class="cs-field"><label>Day-of contact</label><input class="cs-input" id="csContactName"></div>
+            <div class="cs-field"><label>Contact phone</label><input class="cs-input" id="csContactPhone"></div>
+          </div>
+          <div id="csDateCheck" style="font-size:12px;color:var(--muted);margin-top:10px;"></div>
+        </div>
+
+        <div class="card">
+          <h2 class="section-title">3. Cast</h2>
+          <p style="font-size:13px;color:var(--muted);margin:0 0 12px;line-height:1.6;">
+            Emails are pulled from the Auditions list. Fix any name, type an email where one is missing, or untick someone to leave them out.
+            Rows marked TBD start unticked &mdash; type a name to include them.
+          </p>
+          <div class="cs-table-wrap">
+            <table class="cs-table">
+              <thead><tr><th style="width:34px;">Incl.</th><th style="width:30px;">#</th><th>Name</th><th>Character</th><th>Call</th><th>Email</th><th></th><th></th></tr></thead>
+              <tbody id="csCastBody"></tbody>
+            </table>
+          </div>
+          <div class="toolbar"><button class="btn secondary small" onclick="csAddRow()">+ Add person</button></div>
+          <div class="cs-summary" id="csSummary"></div>
+        </div>
+
+        <div class="card">
+          <h2 class="section-title">4. Email preview</h2>
+          <div class="cs-grid">
+            <div class="cs-field"><label>Restaurant for lunch</label><input class="cs-input" id="csRestaurant" placeholder="e.g. Willy's Mexicana" oninput="csRefreshEmail()"></div>
+            <div class="cs-field"><label>To</label><input class="cs-input" id="csTo" value="funarios@gmail.com"></div>
+            <div class="cs-field" style="grid-column:1/-1;"><label>Subject</label><input class="cs-input" id="csSubject" oninput="csEmailDirty.subject=true"></div>
+            <div class="cs-field" style="grid-column:1/-1;"><label>BCC (cast, from the list above)</label><div id="csBcc" class="cs-input" style="min-height:38px;font-size:12px;line-height:1.7;"></div></div>
+            <div class="cs-field" style="grid-column:1/-1;">
+              <label>Message <span style="text-transform:none;font-weight:400;">&mdash; edit freely; <a href="#" onclick="csRefreshEmail(true);return false;" style="color:var(--brand-blue);">reset to template</a></span></label>
+              <textarea class="cs-input" id="csBody" rows="15" style="font-family:inherit;line-height:1.55;resize:vertical;" oninput="csEmailDirty.body=true"></textarea>
+            </div>
+          </div>
+          <h2 class="section-title" style="margin-top:18px;">Attachments</h2>
+          <div id="csAttachList" style="font-size:13px;line-height:1.9;"></div>
+          <div style="margin-top:8px;">
+            <button class="btn secondary small" onclick="document.getElementById('csScriptFile').click()">Attach script</button>
+            <input type="file" id="csScriptFile" style="display:none;" onchange="csSetScript(this.files[0])">
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 class="section-title">5. Finish</h2>
+          <p style="font-size:13px;color:var(--muted);margin:0 0 12px;line-height:1.6;">
+            <b style="color:var(--cream);">Add to Payroll Only</b> puts the cast on the Schedule (role &ldquo;Needs Role&rdquo;) and sends nothing &mdash; use it to catch up on past shoots.
+            <b style="color:var(--cream);">Send Email + Add to Payroll</b> does both.
+          </p>
+          <div class="toolbar" style="margin-top:0;">
+            <button class="btn secondary" onclick="csStartSubmit('payroll')">Add to Payroll Only</button>
+            <button class="btn" onclick="csStartSubmit('send')">Send Email + Add to Payroll</button>
+          </div>
+          <div id="csConfirm" style="display:none;margin-top:14px;"></div>
+          <div id="csResult" style="font-size:13px;margin-top:12px;"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
   <input type="file" id="fileInput" accept=".csv">
 
   <footer>
@@ -459,11 +598,11 @@ function rowKey(date, name, role){ return date + '|' + name + '|' + role; }
 function submissionKey(editor, title, dateAssigned){ return editor + '|' + title + '|' + dateAssigned; }
 
 function switchView(view){
-  const payroll = view === 'payroll';
-  document.getElementById('payrollView').style.display = payroll ? 'block' : 'none';
-  document.getElementById('submissionsView').style.display = payroll ? 'none' : 'block';
-  document.getElementById('tabPayroll').classList.toggle('active', payroll);
-  document.getElementById('tabSubmissions').classList.toggle('active', !payroll);
+  const views = { payroll:['payrollView','tabPayroll'], submissions:['submissionsView','tabSubmissions'], callsheets:['callsheetView','tabCallsheets'] };
+  Object.keys(views).forEach(k => {
+    document.getElementById(views[k][0]).style.display = k === view ? 'block' : 'none';
+    document.getElementById(views[k][1]).classList.toggle('active', k === view);
+  });
 }
 
 // ---- Password gate ----
@@ -491,13 +630,16 @@ function applyGateState(){
   document.getElementById('payrollContent').style.display = unlocked ? 'block' : 'none';
   document.getElementById('pendingLock').style.display = unlocked ? 'none' : 'block';
   document.getElementById('pendingSubmissionsBody').style.display = unlocked ? 'block' : 'none';
+  document.getElementById('callsheetLock').style.display = unlocked ? 'none' : 'block';
+  document.getElementById('callsheetContent').style.display = unlocked ? 'block' : 'none';
   if(unlocked) renderAll();
 }
 
 async function unlockGate(){
   const input = document.getElementById('payrollPasswordInput').value
-    || document.getElementById('pendingPasswordInput').value;
-  const statusEls = [document.getElementById('payrollLockStatus'), document.getElementById('pendingLockStatus')];
+    || document.getElementById('pendingPasswordInput').value
+    || document.getElementById('callsheetPasswordInput').value;
+  const statusEls = [document.getElementById('payrollLockStatus'), document.getElementById('pendingLockStatus'), document.getElementById('callsheetLockStatus')];
   const hash = await sha256Hex(input || '');
   if(hash === GATE_PASSWORD_HASH){
     localStorage.setItem('funarios_gate_unlocked', '1');
@@ -1610,6 +1752,606 @@ setInterval(() => {
   if(peopleRatesUrl) fetchPeopleRatesFromUrl(false);
   if(submissionsUrl) fetchSubmissionsFromUrl(false);
 }, AUTO_REFRESH_MS);
+
+// ===== Call sheet parser (shared) =====
+function csNorm(s){ return String(s).toUpperCase().replace(/[^A-Z#]/g,''); }
+function csBuildLines(items){
+  // items: [{page,x,y,w,str}] -> lines of merged cells
+  const byPage = {};
+  items.forEach(it => { if(it.str.trim()) (byPage[it.page] = byPage[it.page] || []).push(it); });
+  const lines = [];
+  Object.keys(byPage).sort((a,b)=>a-b).forEach(p => {
+    const its = byPage[p].sort((a,b)=> b.y - a.y || a.x - b.x);
+    const rows = [];
+    its.forEach(it => {
+      let row = rows.find(r => Math.abs(r.y - it.y) <= 2.5);
+      if(!row){ row = { page:+p, y: it.y, items: [] }; rows.push(row); }
+      row.items.push(it);
+    });
+    rows.sort((a,b)=> b.y - a.y).forEach(r => {
+      r.items.sort((a,b)=> a.x - b.x);
+      const cells = [];
+      r.items.forEach(it => {
+        const last = cells[cells.length-1];
+        if(last && it.x - (last.x2) < 6){ last.text += (it.x - last.x2 > 1.5 ? ' ' : '') + it.str; last.x2 = it.x + it.w; }
+        else cells.push({ x: it.x, x2: it.x + it.w, text: it.str });
+      });
+      cells.forEach(c => c.text = c.text.replace(/\s+/g,' ').trim());
+      lines.push({ page: r.page, y: r.y, cells, text: cells.map(c=>c.text).join(' ') });
+    });
+  });
+  return lines;
+}
+// value(s) sitting under a header label in the top info grid
+function csUnder(lines, label, maxLines){
+  for(let i=0;i<lines.length;i++){
+    const cell = lines[i].cells.find(c => csNorm(c.text).startsWith(csNorm(label)));
+    if(!cell) continue;
+    const out = [];
+    for(let j=i+1; j<lines.length && out.length < (maxLines||1); j++){
+      if(lines[j].page !== lines[i].page) break;
+      // stop when we hit the next row of header labels in this column
+      const c = lines[j].cells.find(c => Math.abs(c.x - cell.x) < 12);
+      if(!c) { if(lines[i].y - lines[j].y > 60) break; continue; }
+      if(/^[A-Z .—\-\[\]]+$/.test(c.text) && c.text.length > 3 && !/\d/.test(c.text)) break;
+      out.push(c.text);
+    }
+    return out;
+  }
+  return [];
+}
+function csParse(items, meta){
+  const lines = csBuildLines(items);
+  const all = lines.map(l=>l.text);
+  const res = { title:'', date:'', dateISO:'', generalCall:'', wrap:'', location:'', contactName:'', contactPhone:'', cast:[], warnings:[] };
+  // Title: line right before "Written by"
+  const wi = all.findIndex(t => /^Written by/i.test(t));
+  if(wi > 0) res.title = all[wi-1];
+  if(!res.title && meta && meta.Title) res.title = meta.Title.replace(/\s*call\s*sheet\s*$/i,'').trim();
+  // Shoot date
+  const dl = all.find(t => /SHOOT\s*DATE/i.test(t)) || all.join(' ');
+  const dm = dl.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+  if(dm){
+    const y = dm[3].length === 2 ? '20'+dm[3] : dm[3];
+    res.dateISO = `${y}-${dm[1].padStart(2,'0')}-${dm[2].padStart(2,'0')}`;
+    res.date = `${+dm[1]}/${+dm[2]}/${y}`;
+  } else res.warnings.push('Could not find the shoot date.');
+  res.generalCall = (csUnder(lines,'GENERAL CALL')[0] || '').trim();
+  res.wrap = (csUnder(lines,'EST. WRAP')[0] || '').trim();
+  const loc = csUnder(lines,'LOCATION',3);
+  res.locationName = loc[0] || '';
+  res.location = loc.slice(1).join(', ').replace(/ (GA|Georgia) /,', $1 ') || loc.join(', ');
+  const contact = (csUnder(lines,'CONTACT')[0] || '');
+  const pm = contact.match(/[\d().\-\s]{10,}/);
+  if(pm){ res.contactPhone = pm[0].trim(); res.contactName = contact.replace(pm[0],'').trim(); }
+  else res.contactName = contact;
+  // Cast table
+  const hi = lines.findIndex(l => l.cells.some(c=>csNorm(c.text)==='CAST') && l.cells.some(c=>csNorm(c.text)==='ROLE') && l.cells.some(c=>csNorm(c.text)==='CALL'));
+  if(hi < 0){ res.warnings.push('Could not find the Cast table.'); return res; }
+  const head = lines[hi];
+  const cols = head.cells.map(c => ({ key: csNorm(c.text), x: c.x })).sort((a,b)=>a.x-b.x);
+  const colOf = x => { let k = cols[0].key; for(const c of cols){ if(x >= c.x - 4) k = c.key; } return k; };
+  for(let j=hi+1;j<lines.length;j++){
+    const l = lines[j];
+    if(l.page !== head.page) break;
+    if(/^Safety|^Department|^Cast Wardrobe/i.test(l.text)) break;
+    const row = {};
+    l.cells.forEach(c => { const k = colOf(c.x); row[k] = row[k] ? row[k] + ' ' + c.text : c.text; });
+    if(!row['#'] || !/^\d+$/.test(row['#'].trim())) continue;
+    const name = (row['CAST']||'').trim();
+    res.cast.push({
+      num: row['#'].trim(),
+      name: /^TBD$/i.test(name) ? '' : name,
+      tbd: !name || /^TBD$/i.test(name),
+      character: (row['ROLE']||'').trim(),
+      call: (row['CALL']||'').trim(),
+      wrap: (row['ESTWRAP']||'').trim(),
+      scenes: (row['SCENES']||'').trim().replace(/,$/,'')
+    });
+  }
+  if(!res.cast.length) res.warnings.push('Cast table was found but no cast rows were read.');
+  return res;
+}
+
+// ===== Call Sheets tab =====
+const CS_PLACEHOLDER_ROLE = 'Needs Role';   // the dashboard skips Schedule rows with no role, so new rows get this until set via the role dropdown
+let csState = { parsed:null, cast:[], file:null };
+
+function csLoadPdfJs(){
+  if(window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    s.onload = () => {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      resolve(window.pdfjsLib);
+    };
+    s.onerror = () => reject(new Error('Could not load the PDF reader. Check your internet connection.'));
+    document.head.appendChild(s);
+  });
+}
+
+function csSetStatus(msg, isError){
+  const el = document.getElementById('csStatus');
+  el.textContent = msg;
+  el.style.color = isError ? 'var(--red)' : 'var(--muted)';
+}
+
+async function csHandleFile(file){
+  if(!file) return;
+  if(!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf'){ csSetStatus('That is not a PDF. Upload the call sheet PDF.', true); return; }
+  csSetStatus('Reading ' + file.name + '…');
+  try{
+    const pdfjs = await csLoadPdfJs();
+    const buf = await file.arrayBuffer();
+    const doc = await pdfjs.getDocument({ data: new Uint8Array(buf) }).promise;
+    const items = [];
+    for(let p = 1; p <= doc.numPages; p++){
+      const tc = await (await doc.getPage(p)).getTextContent();
+      tc.items.forEach(it => items.push({ page:p, x:it.transform[4], y:it.transform[5], w:it.width, str:it.str }));
+    }
+    const meta = ((await doc.getMetadata().catch(() => ({}))) || {}).info || {};
+    const parsed = csParse(items, meta);
+    csState = { parsed, file, cast: parsed.cast.map(c => ({
+      num:c.num, name:c.name, character:c.character, call:c.call, scenes:c.scenes,
+      tbd:c.tbd, include:!c.tbd, email:'', emailStatus: c.tbd ? 'missing' : 'pending', matchNote:''
+    })) };
+    csFillDetails(parsed);
+    csSetStatus(`Read ${file.name} — ${parsed.cast.length} cast row${parsed.cast.length===1?'':'s'} found. Check everything below.`);
+    document.getElementById('csParsed').style.display = 'block';
+    csRenderCast();
+    csCheckDate();
+    csLookupEmails();
+  }catch(err){
+    console.error(err);
+    csSetStatus('Could not read that PDF: ' + err.message, true);
+  }
+}
+
+function csFillDetails(p){
+  document.getElementById('csTitle').value = p.title || '';
+  document.getElementById('csDate').value = p.dateISO || '';
+  document.getElementById('csCall').value = p.generalCall || '';
+  document.getElementById('csWrap').value = p.wrap || '';
+  document.getElementById('csLocation').value = p.location || '';
+  document.getElementById('csContactName').value = p.contactName || '';
+  document.getElementById('csContactPhone').value = p.contactPhone || '';
+  document.getElementById('csWarnings').innerHTML =
+    (p.warnings || []).map(x => `<div class="cs-warn">${escapeHtml(x)} Fill it in by hand below.</div>`).join('');
+}
+
+function csCheckDate(){
+  const iso = document.getElementById('csDate').value;
+  const el = document.getElementById('csDateCheck');
+  if(!iso){ el.textContent = ''; return; }
+  const existing = (schedule || []).filter(r => r.date === iso);
+  if(existing.length){
+    el.style.color = 'var(--red)';
+    el.innerHTML = `Heads up: ${existing.length} ${existing.length===1?'person is':'people are'} already on the schedule for this date (` +
+      escapeHtml([...new Set(existing.map(r => r.name))].join(', ')) + `). Anyone already listed won't be added twice.`;
+  } else {
+    el.style.color = 'var(--muted)';
+    el.textContent = 'Nobody is on the schedule for this date yet.';
+  }
+}
+
+function csBadge(c){
+  if(!c.include) return '<span class="cs-badge skip">Skipped</span>';
+  if(c.emailStatus === 'found') return '<span class="cs-badge found">Found in Auditions</span>';
+  if(c.emailStatus === 'typed') return '<span class="cs-badge found">Typed in</span>';
+  if(c.emailStatus === 'pending') return '<span class="cs-badge pending">' + (csConfigured() ? 'Looking up…' : 'Lookup not connected yet') + '</span>';
+  return '<span class="cs-badge missing">Not found — type email</span>';
+}
+
+function csRenderCast(){
+  document.getElementById('csCastBody').innerHTML = csState.cast.map((c, i) => `
+    <tr class="${c.include ? '' : 'skipped'}">
+      <td><input type="checkbox" ${c.include ? 'checked' : ''} onchange="csSet(${i},'include',this.checked)"></td>
+      <td>${escapeHtml(c.num || '')}</td>
+      <td><input class="cs-input" value="${escapeHtml(c.name)}" placeholder="${c.tbd ? 'TBD — type a name' : 'Name'}" onchange="csSet(${i},'name',this.value)"></td>
+      <td><input class="cs-input" value="${escapeHtml(c.character || '')}" placeholder="Character" onchange="csSet(${i},'character',this.value)"></td>
+      <td style="white-space:nowrap;">${escapeHtml(c.call || '')}</td>
+      <td><input class="cs-input" type="email" value="${escapeHtml(c.email)}" placeholder="email@example.com" onchange="csSet(${i},'email',this.value)">
+          ${c.matchNote ? `<div style="font-size:11px;color:var(--muted);margin-top:3px;">${escapeHtml(c.matchNote)}</div>` : ''}</td>
+      <td>${csBadge(c)}</td>
+      <td><button class="cs-x" title="Remove row" onclick="csRemoveRow(${i})">&times;</button></td>
+    </tr>`).join('');
+  csRenderSummary();
+}
+
+function csSet(i, field, val){
+  const c = csState.cast[i];
+  if(field === 'name'){
+    c.name = val.trim();
+    if(c.name && !c.include) c.include = true;
+    c.email = ''; c.matchNote = '';
+    c.emailStatus = c.name ? 'pending' : 'missing';
+    csRenderCast();
+    if(c.name) csLookupEmails([i]);
+    return;
+  }
+  if(field === 'email'){
+    c.email = val.trim();
+    c.emailStatus = c.email ? 'typed' : 'missing';
+  }
+  if(field === 'character') c.character = val.trim();
+  if(field === 'include') c.include = val;
+  csRenderCast();
+}
+
+function csAddRow(){
+  csState.cast.push({ num:'', name:'', character:'', call:'', scenes:'', tbd:true, include:false, email:'', emailStatus:'missing', matchNote:'' });
+  csRenderCast();
+}
+function csRemoveRow(i){ csState.cast.splice(i, 1); csRenderCast(); }
+
+function csRenderSummary(){
+  const inc = csState.cast.filter(c => c.include);
+  const withEmail = inc.filter(c => /\S+@\S+\.\S+/.test(c.email));
+  const noName = inc.filter(c => !c.name).length;
+  document.getElementById('csSummary').innerHTML =
+    `<span><b>${inc.length}</b> included</span>` +
+    `<span><b>${withEmail.length}</b> with email</span>` +
+    `<span><b>${inc.length - withEmail.length}</b> missing email</span>` +
+    (noName ? `<span style="color:var(--red);"><b>${noName}</b> included without a name</span>` : '') +
+    `<span><b>${csState.cast.length - inc.length}</b> skipped</span>`;
+}
+
+// ---- Email lookup (connected in step 3) ----
+function csConfigured(){ return false; }
+function csLookupEmails(onlyIdx){ /* wired up in step 3 */ }
+
+// Drag & drop on the upload box
+(function(){
+  const drop = document.getElementById('csDrop');
+  if(!drop) return;
+  ['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('drag'); }));
+  ['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('drag'); }));
+  drop.addEventListener('drop', e => { const f = e.dataTransfer.files && e.dataTransfer.files[0]; if(f) csHandleFile(f); });
+})();
+
+// ---- Step 2: email preview ----
+const CS_STANDARD_ATTACHMENTS = ['Updated_Funarios_Pay_Packet_2026.pdf', 'Updated_Funarios_Talent_Agreement_Form.pdf'];
+let csEmailDirty = { subject:false, body:false };
+let csScript = null;   // { name, file }
+
+function csOrdinal(n){ const s = ['th','st','nd','rd'], v = n % 100; return n + (s[(v-20)%10] || s[v] || s[0]); }
+function csDateLong(iso){
+  if(!iso) return '[shoot date]';
+  const [y,m,d] = iso.split('-').map(Number);
+  const dt = new Date(y, m-1, d);
+  return dt.toLocaleDateString('en-US', { weekday:'long' }) + ', ' + dt.toLocaleDateString('en-US', { month:'long' }) + ' ' + csOrdinal(d);
+}
+function csPhoneFmt(p){
+  const d = String(p || '').replace(/\D/g,'').replace(/^1(?=\d{10}$)/,'');
+  return d.length === 10 ? `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6)}` : (p || '');
+}
+// "Tomorrow will be fun!" when the shoot is tomorrow (Atlanta time), "Today…" same day, otherwise "It will be fun!"
+function csFunLine(iso){
+  if(!iso) return 'It will be fun!';
+  const today = new Date().toLocaleDateString('en-CA', { timeZone:'America/New_York' });
+  const diff = Math.round((new Date(iso) - new Date(today)) / 86400000);
+  return diff === 1 ? 'Tomorrow will be fun!' : diff === 0 ? 'Today will be fun!' : 'It will be fun!';
+}
+function csVal(id){ return (document.getElementById(id).value || '').trim(); }
+
+function csTemplate(){
+  const iso = csVal('csDate');
+  const contact = csVal('csContactName').split(' ')[0] || '[contact]';
+  const phone = csPhoneFmt(csVal('csContactPhone')) || '[phone]';
+  return {
+    subject: `FUNarios Call Sheet – ${csVal('csTitle') || '[project]'} – ${csDateLong(iso)}`,
+    body:
+`Hi friends!
+
+We hope all is well. The callsheet and script is attached for ${csDateLong(iso)}!
+
+Please make sure to double check your call time and come in on time!
+We are filming at ${csVal('csLocation') || '[location]'}.
+We will be providing ${csVal('csRestaurant') || '[restaurant]'} for lunch. Please respond with your lunch order.
+If you have not provided the payment form attached, please do so prior to your arrival and send it back here.
+If anything happens on the day, please contact ${contact} at ${phone}.
+Please confirm receipt of this email!
+We look forward to working with you! ${csFunLine(iso)}
+
+Warm regards,
+Funarios`
+  };
+}
+
+function csRefreshEmail(force){
+  if(force){ csEmailDirty = { subject:false, body:false }; }
+  const t = csTemplate();
+  if(!csEmailDirty.subject) document.getElementById('csSubject').value = t.subject;
+  if(!csEmailDirty.body) document.getElementById('csBody').value = t.body;
+  csRenderBcc();
+  csRenderAttachments();
+}
+
+function csBccList(){
+  return csState.cast.filter(c => c.include && c.name && /\S+@\S+\.\S+/.test(c.email));
+}
+function csRenderBcc(){
+  const el = document.getElementById('csBcc');
+  if(!el) return;
+  const list = csBccList();
+  const missing = csState.cast.filter(c => c.include && c.name && !/\S+@\S+\.\S+/.test(c.email));
+  el.innerHTML = (list.length ? list.map(c => `${escapeHtml(c.name)} &lt;${escapeHtml(c.email)}&gt;`).join(', ') : '<span style="color:var(--muted);">No emails yet</span>') +
+    (missing.length ? `<div style="color:var(--red);margin-top:4px;">Won't be emailed (no email): ${escapeHtml(missing.map(c => c.name).join(', '))}</div>` : '');
+}
+
+function csSetScript(file){
+  csScript = file ? { name:file.name, file } : null;
+  csRenderAttachments();
+}
+function csRenderAttachments(){
+  const el = document.getElementById('csAttachList');
+  if(!el) return;
+  const rows = [];
+  rows.push(`📎 ${escapeHtml(csState.file ? csState.file.name : 'Call sheet PDF')} <span style="color:var(--muted);">(call sheet)</span>`);
+  rows.push(csScript
+    ? `📎 ${escapeHtml(csScript.name)} <span style="color:var(--muted);">(script)</span> <a href="#" onclick="csSetScript(null);return false;" style="color:var(--red);font-size:12px;">remove</a>`
+    : `<span style="color:var(--red);">⚠ No script attached yet</span>`);
+  CS_STANDARD_ATTACHMENTS.forEach(n => rows.push(`📎 ${escapeHtml(n)} <span style="color:var(--muted);">(sent every time)</span>`));
+  el.innerHTML = rows.join('<br>');
+}
+
+// keep the preview in sync when shoot details or the cast list change
+['csTitle','csDate','csLocation','csContactName','csContactPhone'].forEach(id => {
+  const el = document.getElementById(id);
+  if(el) el.addEventListener('input', () => csRefreshEmail());
+  if(el) el.addEventListener('change', () => csRefreshEmail());
+});
+const _csRenderSummaryBase = csRenderSummary;
+csRenderSummary = function(){ _csRenderSummaryBase(); csRenderBcc(); };
+
+// ---- Step 5: finish (backend wired up in step 3) ----
+function csValidate(mode){
+  const errs = [], warns = [];
+  if(!csVal('csDate')) errs.push('Shoot date is empty.');
+  if(!csVal('csTitle')) errs.push('Project name is empty.');
+  const inc = csState.cast.filter(c => c.include);
+  if(!inc.length) errs.push('Nobody is included.');
+  if(inc.some(c => !c.name)) errs.push('Someone is ticked but has no name — type a name or untick them.');
+  if(mode === 'send'){
+    if(!/\S+@\S+\.\S+/.test(csVal('csTo'))) errs.push('The "To" address is empty.');
+    if(!csBccList().length) errs.push('Nobody has an email address yet.');
+    if(!csVal('csRestaurant') && /\[restaurant\]/.test(document.getElementById('csBody').value)) errs.push('Restaurant is empty.');
+    if(/\[(shoot date|location|contact|phone|project)\]/.test(document.getElementById('csBody').value)) errs.push('The message still has a [blank] in it.');
+    const missing = inc.filter(c => c.name && !/\S+@\S+\.\S+/.test(c.email));
+    if(missing.length) warns.push(`${missing.map(c => c.name).join(', ')} won't get the email (no address) but will still be added to payroll.`);
+    if(!csScript) warns.push('No script is attached.');
+  }
+  return { errs, warns };
+}
+
+function csStartSubmit(mode){
+  const box = document.getElementById('csConfirm');
+  const { errs, warns } = csValidate(mode);
+  document.getElementById('csResult').textContent = '';
+  if(errs.length){
+    box.style.display = 'block';
+    box.innerHTML = `<div class="cs-warn"><b>Fix these first:</b><br>${errs.map(escapeHtml).join('<br>')}</div>`;
+    return;
+  }
+  const inc = csState.cast.filter(c => c.include);
+  const sendLine = mode === 'send'
+    ? `Email to <b>${escapeHtml(csVal('csTo'))}</b> with <b>${csBccList().length}</b> cast on BCC and <b>${2 + CS_STANDARD_ATTACHMENTS.length - (csScript ? 0 : 1)}</b> attachments.<br>`
+    : '';
+  box.style.display = 'block';
+  box.innerHTML = `<div class="card" style="margin:0;padding:16px;background:var(--panel-2);">
+      ${sendLine}Add <b>${inc.length}</b> ${inc.length===1?'person':'people'} to the Schedule for <b>${escapeHtml(csDateLong(csVal('csDate')))}</b> (${escapeHtml(csVal('csTitle'))}) as &ldquo;${CS_PLACEHOLDER_ROLE}&rdquo;.
+      ${warns.length ? `<div style="color:var(--red);margin-top:8px;">${warns.map(escapeHtml).join('<br>')}</div>` : ''}
+      <div class="toolbar" style="margin-top:12px;">
+        <button class="btn" onclick="csSubmit('${mode}')">${mode === 'send' ? 'Yes, send it' : 'Yes, add to payroll'}</button>
+        <button class="btn secondary" onclick="document.getElementById('csConfirm').style.display='none'">Cancel</button>
+      </div></div>`;
+}
+
+function csSubmit(mode){
+  document.getElementById('csConfirm').style.display = 'none';
+  const r = document.getElementById('csResult');
+  r.style.color = 'var(--red)';
+  r.textContent = 'Not connected yet — sending and payroll logging get switched on in step 3.';
+}
+
+// render the preview whenever a new call sheet is read
+const _csFillDetailsBase = csFillDetails;
+csFillDetails = function(p){ _csFillDetailsBase(p); csEmailDirty = { subject:false, body:false }; csScript = null; document.getElementById('csRestaurant').value = ''; setTimeout(() => csRefreshEmail(true), 0); };
+
+// ---- Step 3: connection to the casting@ Apps Script ----
+let csConfig = {
+  url: localStorage.getItem('funarios_cs_url') || 'https://script.google.com/macros/s/AKfycbxfYW04UgCAhKXQIzhVA93HiPEix1tPkPa0ZHbPFMgY1AvZLy72ov0LufwFKVluNbV8/exec',
+  secret: localStorage.getItem('funarios_cs_secret') || ''
+};
+csConfigured = function(){ return !!(csConfig.url && csConfig.secret); };
+
+function csToggleSettings(open){
+  const el = document.getElementById('csSettings');
+  el.style.display = (open === undefined ? el.style.display === 'none' : open) ? 'block' : 'none';
+}
+function csSaveSettings(){
+  csConfig.url = document.getElementById('csUrlInput').value.trim();
+  csConfig.secret = document.getElementById('csSecretInput').value.trim();
+  localStorage.setItem('funarios_cs_url', csConfig.url);
+  localStorage.setItem('funarios_cs_secret', csConfig.secret);
+  csCheckConnection();
+}
+
+async function csCall(action, payload){
+  if(!csConfigured()) throw new Error('Not connected — open Connection settings above.');
+  const res = await fetch(csConfig.url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(Object.assign({ action, secret: csConfig.secret }, payload || {}))
+  });
+  let data;
+  try { data = await res.json(); } catch(e){ throw new Error('The script did not answer properly. Check the script URL.'); }
+  if(!data.ok) throw new Error(data.error || 'Something went wrong');
+  return data;
+}
+
+async function csCheckConnection(){
+  const el = document.getElementById('csConnStatus');
+  const att = document.getElementById('csStdAttach');
+  if(!csConfigured()){
+    el.innerHTML = '<span class="cs-badge missing">Not connected</span> Add the script URL and secret key.';
+    csToggleSettings(true);
+    return;
+  }
+  el.innerHTML = '<span class="cs-badge pending">Checking…</span>';
+  try{
+    const s = await csCall('status');
+    el.innerHTML = `<span class="cs-badge found">Connected</span> Emails send from <b>${escapeHtml(s.sender)}</b>.`;
+    att.innerHTML =
+      `Pay Packet: ${s.payPacket ? '<b>' + escapeHtml(s.payPacket) + '</b>' : '<span style="color:var(--red);">not uploaded</span>'}<br>` +
+      `Talent Agreement: ${s.talentAgreement ? '<b>' + escapeHtml(s.talentAgreement) + '</b>' : '<span style="color:var(--red);">not uploaded</span>'}`;
+    csStd = { pay: s.payPacket, talent: s.talentAgreement };
+    if(!s.payPacket || !s.talentAgreement) csToggleSettings(true);
+    csRenderAttachments();
+    if(csState.cast.length) csLookupEmails();
+  }catch(err){
+    el.innerHTML = `<span class="cs-badge missing">Not connected</span> ${escapeHtml(err.message)}`;
+    csToggleSettings(true);
+  }
+}
+
+function csFileToB64(file){
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve({ name: file.name, type: file.type || 'application/pdf', data: String(r.result).split(',')[1] });
+    r.onerror = () => reject(new Error('Could not read ' + file.name));
+    r.readAsDataURL(file);
+  });
+}
+
+async function csUploadStd(kind, file){
+  if(!file) return;
+  const el = document.getElementById('csStdAttach');
+  el.insertAdjacentHTML('beforeend', `<div style="color:var(--muted);">Uploading ${escapeHtml(file.name)}…</div>`);
+  try{
+    await csCall('uploadStandard', { kind, file: await csFileToB64(file) });
+    csCheckConnection();
+  }catch(err){
+    el.insertAdjacentHTML('beforeend', `<div style="color:var(--red);">Upload failed: ${escapeHtml(err.message)}</div>`);
+  }
+}
+
+// standard attachment names come from the script once connected
+let csStd = { pay:null, talent:null };
+const _csRenderAttachmentsBase = csRenderAttachments;
+csRenderAttachments = function(){
+  _csRenderAttachmentsBase();
+  const el = document.getElementById('csAttachList');
+  if(!el || !csConfigured()) return;
+  el.innerHTML = el.innerHTML
+    .replace(/📎 Updated_Funarios_Pay_Packet_2026\.pdf <span[^>]*>\(sent every time\)<\/span>/,
+      csStd.pay ? `📎 ${escapeHtml(csStd.pay)} <span style="color:var(--muted);">(sent every time)</span>` : `<span style="color:var(--red);">⚠ Pay Packet not uploaded — see Connection settings</span>`)
+    .replace(/📎 Updated_Funarios_Talent_Agreement_Form\.pdf <span[^>]*>\(sent every time\)<\/span>/,
+      csStd.talent ? `📎 ${escapeHtml(csStd.talent)} <span style="color:var(--muted);">(sent every time)</span>` : `<span style="color:var(--red);">⚠ Talent Agreement not uploaded — see Connection settings</span>`);
+};
+
+// ---- email lookup ----
+csLookupEmails = async function(onlyIdx){
+  if(!csConfigured()){ csRenderCast(); return; }
+  const idxs = (onlyIdx || csState.cast.map((_, i) => i)).filter(i => csState.cast[i] && csState.cast[i].name && csState.cast[i].emailStatus !== 'typed');
+  if(!idxs.length) return;
+  idxs.forEach(i => { csState.cast[i].emailStatus = 'pending'; });
+  csRenderCast();
+  try{
+    const names = idxs.map(i => csState.cast[i].name);
+    const { results } = await csCall('lookup', { names });
+    idxs.forEach(i => {
+      const c = csState.cast[i];
+      if(c.emailStatus === 'typed') return;
+      const hits = results[c.name] || [];
+      c.options = hits;
+      if(!hits.length){ c.email = ''; c.emailStatus = 'missing'; c.matchNote = ''; return; }
+      c.email = hits[0].email;
+      c.emailStatus = 'found';
+      c.matchNote = hits.length > 1
+        ? `${hits.length} possible matches — check the one picked`
+        : (hits[0].how === 'exact' ? '' : `Matched “${hits[0].name}”`);
+    });
+  }catch(err){
+    idxs.forEach(i => { if(csState.cast[i].emailStatus === 'pending') csState.cast[i].emailStatus = 'missing'; });
+    csSetStatus('Email lookup failed: ' + err.message, true);
+  }
+  csRenderCast();
+};
+
+// show a picker when several Auditions entries match the same name
+const _csRenderCastBase = csRenderCast;
+csRenderCast = function(){
+  _csRenderCastBase();
+  const rows = document.querySelectorAll('#csCastBody tr');
+  csState.cast.forEach((c, i) => {
+    if(!c.options || c.options.length < 2 || c.emailStatus === 'typed' || !rows[i]) return;
+    const cell = rows[i].children[5];
+    const sel = document.createElement('select');
+    sel.className = 'cs-input';
+    sel.style.marginTop = '4px';
+    sel.innerHTML = c.options.map(o => `<option value="${escapeHtml(o.email)}" ${o.email === c.email ? 'selected' : ''}>${escapeHtml(o.name)} — ${escapeHtml(o.email)}</option>`).join('');
+    sel.onchange = () => { c.email = sel.value; c.emailStatus = 'found'; csRenderCast(); };
+    cell.appendChild(sel);
+  });
+};
+
+// ---- submit ----
+csSubmit = async function(mode){
+  document.getElementById('csConfirm').style.display = 'none';
+  const r = document.getElementById('csResult');
+  if(!csConfigured()){ r.style.color = 'var(--red)'; r.textContent = 'Not connected — open Connection settings at the top of this tab.'; return; }
+  r.style.color = 'var(--muted)';
+  r.textContent = mode === 'send' ? 'Sending email and adding to payroll…' : 'Adding to payroll…';
+  document.querySelectorAll('#callsheetContent .btn').forEach(b => b.disabled = true);
+  try{
+    const inc = csState.cast.filter(c => c.include && c.name);
+    const payload = {
+      mode,
+      date: csVal('csDate'),
+      project: csVal('csTitle'),
+      cast: inc.map(c => ({ name: c.name, email: c.email }))
+    };
+    if(mode === 'send'){
+      payload.to = csVal('csTo');
+      payload.subject = csVal('csSubject');
+      payload.body = document.getElementById('csBody').value;
+      payload.callsheet = csState.file ? await csFileToB64(csState.file) : null;
+      payload.script = csScript ? await csFileToB64(csScript.file) : null;
+    }
+    const out = await csCall('submit', payload);
+    // reflect the new rows locally so the payroll tab and date check update right away
+    out.added.forEach(name => {
+      const key = rowKey(payload.date, name, CS_PLACEHOLDER_ROLE);
+      if(!schedule.find(x => x.key === key)) schedule.push({ key, date: payload.date, name, role: CS_PLACEHOLDER_ROLE, project: payload.project });
+    });
+    save();
+    csCheckDate();
+    r.style.color = 'var(--brand-green-dim)';
+    r.innerHTML =
+      (out.sent ? `✅ Email sent to ${escapeHtml(payload.to)} with ${out.bccCount} on BCC and ${out.attachmentCount} attachments.<br>` : '') +
+      `✅ Added to payroll Schedule: ${out.added.length ? escapeHtml(out.added.join(', ')) : 'nobody new'}` +
+      (out.skipped.length ? `<br>Already on the schedule for that date (not added again): ${escapeHtml(out.skipped.join(', '))}` : '') +
+      `<br><span style="color:var(--muted);">Set their roles on the Payroll Dashboard tab — they show as “${CS_PLACEHOLDER_ROLE}” until then.</span>`;
+  }catch(err){
+    r.style.color = 'var(--red)';
+    r.textContent = 'Failed: ' + err.message + '. It is safe to try again — anyone already added to the Schedule for that date will not be added twice.';
+  }finally{
+    document.querySelectorAll('#callsheetContent .btn').forEach(b => b.disabled = false);
+  }
+};
+
+// load saved settings into the inputs and check the connection when the tab is opened
+(function(){
+  const u = document.getElementById('csUrlInput'), s = document.getElementById('csSecretInput');
+  if(u) u.value = csConfig.url;
+  if(s) s.value = csConfig.secret;
+  const tab = document.getElementById('tabCallsheets');
+  let checked = false;
+  if(tab) tab.addEventListener('click', () => { if(!checked){ checked = true; csCheckConnection(); } });
+})();
+
 </script>
 </body>
 </html>
