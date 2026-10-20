@@ -1856,6 +1856,12 @@ function csParse(items, meta){
     while((m = r1.exec(top))) add(m[1], m[2]);
     const r2 = new RegExp('\\b(Camera|Sound)\\s+(' + NM + ')(?=\\s*(?:[\u2022\u00b7|]|$|\\s{2}))', 'g');
     while((m = r2.exec(top))) add(m[2], m[1]);
+    // Fallback for sheets that list crew names without roles (e.g. "Lonnie • Hakim • Spike G • Darius")
+    const KNOWN_CREW = { 'spike g':['Spike G','Camera man'], 'darius':['Darius','Audio'] };
+    const head = all.slice(0, 12).join('  ');
+    Object.keys(KNOWN_CREW).forEach(k => {
+      if(!found[k] && new RegExp('(^|[^A-Za-z])' + k + '(?![A-Za-z])', 'i').test(head)) found[k] = { name: KNOWN_CREW[k][0], role: KNOWN_CREW[k][1] };
+    });
     res.crew = Object.values(found);
   }
   // Cast table
