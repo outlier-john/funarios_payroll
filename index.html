@@ -1850,7 +1850,7 @@ function csParse(items, meta){
     const top = all.slice(0, 30).join('  ');
     const NM = "[A-Z][\\w.']*(?:\\s[A-Z][\\w.']*)?";
     const found = {};
-    const add = (n, kind) => { n = n.trim(); if(n && !found[n.toLowerCase()]) found[n.toLowerCase()] = { name:n, role: /camera/i.test(kind) ? 'Camera man' : 'Audio' }; };
+    const add = (n, kind) => { n = n.trim(); if(n && !/\b[A-Z]{3,}\b/.test(n) && !found[n.toLowerCase()]) found[n.toLowerCase()] = { name:n, role: /camera/i.test(kind) ? 'Camera man' : 'Audio' }; };
     let m;
     const r1 = new RegExp('(' + NM + ')\\s*[\u2014\u2013-]\\s*(Camera|Sound)\\b', 'g');
     while((m = r1.exec(top))) add(m[1], m[2]);
