@@ -190,6 +190,46 @@
   .cs-warn{background:rgba(232,52,46,.08);border:1px solid rgba(232,52,46,.3);color:var(--brand-red-dim);border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:14px;}
   .cs-x{background:none;border:none;color:var(--muted);font-size:18px;line-height:1;cursor:pointer;padding:0 4px;}
   .cs-x:hover{color:var(--red);}
+  /* ---- Release Calendar ---- */
+  .rel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
+  .rel-sync{font-size:12px;color:var(--muted);font-family:'IBM Plex Mono',monospace;}
+  .rel-sync.err{color:var(--red);}
+  .rel-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;}
+  .rel-stat{border:1px solid var(--line);border-radius:8px;padding:12px 14px;}
+  .rel-stat .n{font-family:'Bebas Neue',sans-serif;font-size:32px;line-height:1;}
+  .rel-stat .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:4px;}
+  .rel-stat.red .n{color:var(--red);} .rel-stat.blue .n{color:var(--brand-blue);} .rel-stat.green .n{color:var(--brand-green);}
+  .rel-filters{display:flex;gap:6px;flex-wrap:wrap;}
+  .rel-filter{border:1px solid var(--line);background:transparent;color:var(--muted);font-size:12px;padding:6px 10px;border-radius:4px;}
+  .rel-filter.active{background:var(--brand-green);border-color:var(--brand-green);color:#fff;font-weight:600;}
+  table.rel-table{width:100%;border-collapse:collapse;font-size:13px;min-width:720px;}
+  table.rel-table th{text-align:left;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:8px;border-bottom:1px solid var(--line);}
+  table.rel-table td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top;}
+  table.rel-table tr.today td{background:rgba(59,91,255,0.07);}
+  table.rel-table tr.week-break td{border-top:2px solid var(--line);}
+  .rel-date{font-family:'IBM Plex Mono',monospace;white-space:nowrap;}
+  .rel-date small{display:block;color:var(--muted);font-size:11px;}
+  .rel-tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:3px;font-weight:600;white-space:nowrap;}
+  .rel-tag.members{background:rgba(59,91,255,0.14);color:var(--brand-blue);}
+  .rel-tag.public{background:rgba(232,52,46,0.12);color:var(--brand-red);}
+  .rel-tag.other{background:rgba(92,106,97,0.14);color:var(--muted);}
+  .rel-status{font-size:12px;font-weight:600;}
+  .rel-status.done{color:var(--brand-green);} .rel-status.mid{color:#A6822F;} .rel-status.none{color:var(--muted);}
+  .rel-due{font-family:'IBM Plex Mono',monospace;font-size:12px;white-space:nowrap;}
+  .rel-due.late{color:var(--red);font-weight:700;} .rel-due.soon{color:#C2410C;font-weight:700;}
+  .rel-note{font-size:11px;color:var(--muted);margin-top:3px;max-width:340px;}
+  .rel-alert{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px;}
+  .rel-alert:last-child{border-bottom:none;}
+  .rel-alert .dot{width:8px;height:8px;border-radius:50%;margin-top:6px;flex:none;}
+  .rel-alert .dot.red{background:var(--red);} .rel-alert .dot.amber{background:#C2410C;} .rel-alert .dot.gray{background:var(--muted);}
+  .rel-alert .sub{font-size:12px;color:var(--muted);margin-top:2px;}
+  .rel-editor{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;}
+  .rel-editor:last-child{border-bottom:none;}
+  .rel-editor .bar{flex:1;height:6px;margin:0 14px;background:var(--line);border-radius:3px;overflow:hidden;}
+  .rel-editor .bar span{display:block;height:100%;background:var(--brand-green);}
+  .rel-empty{font-size:13px;color:var(--muted);padding:6px 0;}
+  .view-tabs{overflow-x:auto;scrollbar-width:none;} .view-tab{white-space:nowrap;}
+  @media (max-width:520px){ .rel-stats{grid-template-columns:repeat(2,1fr);} .view-tab{margin-right:12px;} }
 </style>
 </head>
 <body>
@@ -211,6 +251,7 @@
     <button class="view-tab active" id="tabPayroll" onclick="switchView('payroll')">Payroll Dashboard</button>
     <button class="view-tab" id="tabSubmissions" onclick="switchView('submissions')">Editor Submissions</button>
     <button class="view-tab" id="tabCallsheets" onclick="switchView('callsheets')">Call Sheets</button>
+    <button class="view-tab" id="tabReleases" onclick="switchView('releases')">Release Calendar</button>
   </nav>
 
   <div id="payrollView">
@@ -544,6 +585,54 @@
     </div>
   </div>
 
+  <div id="releaseView" style="display:none;">
+
+    <div id="releaseLock" class="card lock-card">
+      <div class="display">Locked</div>
+      <p>Enter the password to view the release calendar.</p>
+      <input id="releasePasswordInput" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')unlockGate()">
+      <button class="btn" onclick="unlockGate()">Unlock</button>
+      <div class="lock-status" id="releaseLockStatus"></div>
+    </div>
+
+    <div id="releaseContent" style="display:none;">
+      <div class="card">
+        <div class="rel-head">
+          <div>
+            <h2 class="section-title" style="margin-bottom:4px;">Release Calendar &mdash; synced from Darius's Master Calendar</h2>
+            <div class="rel-sync" id="relSync">Not loaded yet</div>
+          </div>
+          <button class="btn small secondary" onclick="loadReleases(true)">Refresh</button>
+        </div>
+        <div class="rel-stats" id="relStats"></div>
+      </div>
+
+      <div class="card">
+        <h2 class="section-title">Needs attention</h2>
+        <div id="relAlerts"></div>
+      </div>
+
+      <div class="card">
+        <div class="rel-head">
+          <h2 class="section-title" style="margin:0;">Releases</h2>
+          <div class="rel-filters" id="relFilters">
+            <button class="rel-filter active" data-f="next14" onclick="setRelFilter('next14')">Next 14 days</button>
+            <button class="rel-filter" data-f="upcoming" onclick="setRelFilter('upcoming')">All upcoming</button>
+            <button class="rel-filter" data-f="past" onclick="setRelFilter('past')">Past</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto;"><table class="rel-table"><thead><tr>
+          <th>Date</th><th>Where</th><th>Show / Episode</th><th>Editor</th><th>Status</th><th>Rough cut</th><th>Final due</th>
+        </tr></thead><tbody id="relBody"></tbody></table></div>
+      </div>
+
+      <div class="card">
+        <h2 class="section-title">Editor load &mdash; upcoming releases</h2>
+        <div id="relEditors"></div>
+      </div>
+    </div>
+  </div>
+
   <input type="file" id="fileInput" accept=".csv">
 
   <footer>
@@ -598,11 +687,12 @@ function rowKey(date, name, role){ return date + '|' + name + '|' + role; }
 function submissionKey(editor, title, dateAssigned){ return editor + '|' + title + '|' + dateAssigned; }
 
 function switchView(view){
-  const views = { payroll:['payrollView','tabPayroll'], submissions:['submissionsView','tabSubmissions'], callsheets:['callsheetView','tabCallsheets'] };
+  const views = { payroll:['payrollView','tabPayroll'], submissions:['submissionsView','tabSubmissions'], callsheets:['callsheetView','tabCallsheets'], releases:['releaseView','tabReleases'] };
   Object.keys(views).forEach(k => {
     document.getElementById(views[k][0]).style.display = k === view ? 'block' : 'none';
     document.getElementById(views[k][1]).classList.toggle('active', k === view);
   });
+  if(view === 'releases' && isGateUnlocked()) loadReleases();
 }
 
 // ---- Password gate ----
@@ -632,14 +722,18 @@ function applyGateState(){
   document.getElementById('pendingSubmissionsBody').style.display = unlocked ? 'block' : 'none';
   document.getElementById('callsheetLock').style.display = unlocked ? 'none' : 'block';
   document.getElementById('callsheetContent').style.display = unlocked ? 'block' : 'none';
+  document.getElementById('releaseLock').style.display = unlocked ? 'none' : 'block';
+  document.getElementById('releaseContent').style.display = unlocked ? 'block' : 'none';
   if(unlocked) renderAll();
+  if(unlocked && document.getElementById('releaseView').style.display === 'block') loadReleases();
 }
 
 async function unlockGate(){
   const input = document.getElementById('payrollPasswordInput').value
     || document.getElementById('pendingPasswordInput').value
-    || document.getElementById('callsheetPasswordInput').value;
-  const statusEls = [document.getElementById('payrollLockStatus'), document.getElementById('pendingLockStatus'), document.getElementById('callsheetLockStatus')];
+    || document.getElementById('callsheetPasswordInput').value
+    || document.getElementById('releasePasswordInput').value;
+  const statusEls = [document.getElementById('payrollLockStatus'), document.getElementById('pendingLockStatus'), document.getElementById('callsheetLockStatus'), document.getElementById('releaseLockStatus')];
   const hash = await sha256Hex(input || '');
   if(hash === GATE_PASSWORD_HASH){
     localStorage.setItem('funarios_gate_unlocked', '1');
@@ -1756,6 +1850,158 @@ document.getElementById('editorsBody').addEventListener('click', function(e){
 });
 
 renderAll();
+// =====================================================================
+// RELEASE CALENDAR (read-only sync from Darius's Master Calendar)
+// Data comes from the separate "FUNarios Release Calendar Feed" Apps Script.
+// Paste that script's Web App URL below after deploying it.
+// =====================================================================
+const RELEASE_FEED_URL = 'https://script.google.com/macros/s/AKfycbzA5InIlwY5IvrknS3tPBDGJWCFdTkaUPtdMGP4r2pxsqL2PG5yqE7O0fqblhsBBguC/exec';
+const RELEASE_FEED_KEY = 'rel_rqegQSObNofDVKHrkkj-q81U'; // must match FEED_KEY in ReleaseFeed.gs
+const REL_DONE = ['released', 'scheduled', 'final locked'];
+let releaseRows = [], relFilter = 'next14', relLoading = false, relLastLoad = 0;
+
+function relEsc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function relToday(){ return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date()); }
+function relDays(from, to){ // whole days from -> to (yyyy-mm-dd)
+  const [a,b] = [from, to].map(d => { const [y,m,dd] = d.split('-').map(Number); return Date.UTC(y, m-1, dd); });
+  return Math.round((b - a) / 86400000);
+}
+function relFmt(d, withDay){
+  if(!d) return '';
+  const [y,m,dd] = d.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m-1, dd));
+  const md = (m) + '/' + (dd);
+  return withDay ? md + '<small>' + dt.toLocaleDateString('en-US', { weekday:'short', timeZone:'UTC' }) + '</small>' : md;
+}
+function relIsDone(r){ return REL_DONE.includes((r.status || '').toLowerCase()) || r.finalReceived; }
+function relIsProduction(r){ return !!(r.finalDue || r.roughCut); }
+
+async function loadReleases(force){
+  const sync = document.getElementById('relSync');
+  if(!RELEASE_FEED_URL || RELEASE_FEED_URL.startsWith('PASTE_')){
+    sync.textContent = 'Setup needed: paste the Release Feed Web App URL into RELEASE_FEED_URL in index.html.';
+    sync.className = 'rel-sync err';
+    return;
+  }
+  if(relLoading) return;
+  if(!force && Date.now() - relLastLoad < 60000 && releaseRows.length){ renderReleases(); return; }
+  relLoading = true;
+  sync.textContent = 'Syncing...'; sync.className = 'rel-sync';
+  try{
+    const res = await fetch(RELEASE_FEED_URL + '?key=' + encodeURIComponent(RELEASE_FEED_KEY) + '&t=' + Date.now());
+    if(!res.ok) throw new Error('Server returned ' + res.status);
+    const data = await res.json();
+    if(!data.ok) throw new Error(data.error || 'Feed error');
+    releaseRows = data.rows || [];
+    relLastLoad = Date.now();
+    sync.textContent = 'Synced ' + new Date().toLocaleTimeString([], { hour:'numeric', minute:'2-digit' }) + ' · ' + releaseRows.length + ' releases';
+    renderReleases();
+  } catch(err){
+    sync.textContent = 'Sync failed: ' + err.message + (releaseRows.length ? ' (showing last loaded data)' : '');
+    sync.className = 'rel-sync err';
+  } finally { relLoading = false; }
+}
+
+function setRelFilter(f){
+  relFilter = f;
+  document.querySelectorAll('#relFilters .rel-filter').forEach(b => b.classList.toggle('active', b.dataset.f === f));
+  renderReleases();
+}
+
+function relDueCell(r, dateStr, today){
+  if(!dateStr) return '<span class="rel-due" style="color:var(--muted)">&mdash;</span>';
+  const d = relDays(today, dateStr);
+  let cls = '';
+  if(!relIsDone(r)){ if(d < 0) cls = 'late'; else if(d <= 3) cls = 'soon'; }
+  const label = cls === 'late' ? ' (' + (-d) + 'd late)' : (cls === 'soon' ? (d === 0 ? ' (today)' : ' (' + d + 'd)') : '');
+  return '<span class="rel-due ' + cls + '">' + relFmt(dateStr) + label + '</span>';
+}
+
+function renderReleases(){
+  const today = relToday();
+  const rows = releaseRows.slice().sort((a,b) => a.date.localeCompare(b.date) || (a.type === 'Public') - (b.type === 'Public'));
+
+  // ---- Alerts (Darius's legend: red when due within 3 days or overdue and not complete) ----
+  const alerts = [];
+  rows.forEach(r => {
+    const editor = r.editor || 'Unassigned';
+    if(relIsProduction(r) && !relIsDone(r) && r.date >= today){
+      if(r.finalDue){
+        const d = relDays(today, r.finalDue);
+        if(d < 0) alerts.push({ lvl:'red', sort:d, t:'<b>' + relEsc(r.show) + '</b> — final uploads + assets overdue by ' + (-d) + ' day' + (d === -1 ? '' : 's'), s: editor + ' · status: ' + (r.status || 'blank') + ' · drops ' + relFmt(r.date) });
+        else if(d <= 3) alerts.push({ lvl:'amber', sort:d, t:'<b>' + relEsc(r.show) + '</b> — final due ' + (d === 0 ? 'today' : 'in ' + d + ' day' + (d === 1 ? '' : 's')), s: editor + ' · status: ' + (r.status || 'blank') + ' · drops ' + relFmt(r.date) });
+      }
+      if(r.roughCut && ['not started', 'in edit', ''].includes((r.status || '').toLowerCase())){
+        const d = relDays(today, r.roughCut);
+        if(d < 0) alerts.push({ lvl:'red', sort:d + 0.5, t:'<b>' + relEsc(r.show) + '</b> — rough cut overdue by ' + (-d) + ' day' + (d === -1 ? '' : 's'), s: editor + ' · status: ' + (r.status || 'blank') });
+      }
+      if(!r.editor && relDays(today, r.date) <= 21) alerts.push({ lvl:'amber', sort:50 + relDays(today, r.date), t:'<b>' + relEsc(r.show) + '</b> — no editor assigned', s:'Drops ' + relFmt(r.date) + (r.roughCut ? ' · rough cut due ' + relFmt(r.roughCut) : '') });
+    }
+    if(r.date > today && (r.status || '').toLowerCase() === 'released')
+      alerts.push({ lvl:'gray', sort:100, t:'<b>' + relEsc(r.show) + '</b> (' + relEsc(r.type) + ', ' + relFmt(r.date) + ') is marked <b>Released</b> but the date hasn’t happened yet', s:'Likely a sheet error — worth flagging to Darius' });
+    if(r.date < today && !['released', 'scheduled'].includes((r.status || '').toLowerCase()) && relDays(r.date, today) <= 14)
+      alerts.push({ lvl:'gray', sort:90, t:'<b>' + relEsc(r.show) + '</b> (' + relFmt(r.date) + ') date passed — status still “' + relEsc(r.status || 'blank') + '”', s:'Confirm it went live, then update the sheet' });
+  });
+  alerts.sort((a,b) => a.sort - b.sort);
+  document.getElementById('relAlerts').innerHTML = alerts.length
+    ? alerts.map(a => '<div class="rel-alert"><span class="dot ' + a.lvl + '"></span><div>' + a.t + '<div class="sub">' + relEsc(a.s) + '</div></div></div>').join('')
+    : '<div class="rel-empty">Nothing overdue or at risk right now.</div>';
+
+  // ---- Stats ----
+  const in7 = rows.filter(r => r.date >= today && relDays(today, r.date) <= 7).length;
+  const in14 = rows.filter(r => r.date >= today && relDays(today, r.date) <= 14).length;
+  const risk = alerts.filter(a => a.lvl !== 'gray').length;
+  const next = rows.find(r => r.date >= today);
+  document.getElementById('relStats').innerHTML =
+    '<div class="rel-stat blue"><div class="n">' + in7 + '</div><div class="l">Drops next 7 days</div></div>' +
+    '<div class="rel-stat"><div class="n">' + in14 + '</div><div class="l">Drops next 14 days</div></div>' +
+    '<div class="rel-stat ' + (risk ? 'red' : 'green') + '"><div class="n">' + risk + '</div><div class="l">At risk / overdue</div></div>' +
+    '<div class="rel-stat"><div class="n" style="font-size:20px;line-height:1.2;">' + (next ? relEsc(next.show) : '&mdash;') + '</div><div class="l">Next drop' + (next ? ' · ' + relFmt(next.date) : '') + '</div></div>';
+
+  // ---- Table ----
+  let list;
+  if(relFilter === 'next14') list = rows.filter(r => r.date >= today && relDays(today, r.date) <= 14);
+  else if(relFilter === 'upcoming') list = rows.filter(r => r.date >= today);
+  else list = rows.filter(r => r.date < today).reverse();
+  let lastDate = null;
+  document.getElementById('relBody').innerHTML = list.length ? list.map(r => {
+    const t = (r.type || '').toLowerCase();
+    const tagCls = (t === 'members' || t === 'release') ? 'members' : (t === 'public' ? 'public' : 'other');
+    const st = (r.status || '').toLowerCase();
+    const stCls = REL_DONE.includes(st) ? 'done' : (st === 'not started' || !st ? 'none' : 'mid');
+    const cls = [r.date === today ? 'today' : '', lastDate && lastDate !== r.date ? 'week-break' : ''].join(' ');
+    lastDate = r.date;
+    return '<tr class="' + cls + '">' +
+      '<td class="rel-date">' + relFmt(r.date, true) + '</td>' +
+      '<td><span class="rel-tag ' + tagCls + '">' + relEsc(r.platform) + ' · ' + relEsc(r.type) + '</span></td>' +
+      '<td><b>' + relEsc(r.show) + '</b>' + (r.blocker ? '<div class="rel-note" style="color:var(--red)">' + relEsc(r.blocker) + '</div>' : '') + '</td>' +
+      '<td>' + (r.editor ? relEsc(r.editor) : (relIsProduction(r) ? '<span style="color:#C2410C">Unassigned</span>' : '<span style="color:var(--muted)">&mdash;</span>')) + '</td>' +
+      '<td><span class="rel-status ' + stCls + '">' + relEsc(r.status || 'Not set') + '</span></td>' +
+      '<td>' + relDueCell(r, r.roughCut, today) + '</td>' +
+      '<td>' + relDueCell(r, r.finalDue, today) + '</td></tr>';
+  }).join('') : '<tr><td colspan="7" class="rel-empty">No releases in this range.</td></tr>';
+
+  // ---- Editor load (upcoming production rows) ----
+  const load = {};
+  rows.filter(r => r.date >= today && relIsProduction(r)).forEach(r => {
+    const k = r.editor || 'Unassigned';
+    load[k] = load[k] || { total:0, open:0 };
+    load[k].total++; if(!relIsDone(r)) load[k].open++;
+  });
+  const max = Math.max(1, ...Object.values(load).map(v => v.total));
+  const names = Object.keys(load).sort((a,b) => (a === 'Unassigned') - (b === 'Unassigned') || load[b].total - load[a].total);
+  document.getElementById('relEditors').innerHTML = names.length ? names.map(n =>
+    '<div class="rel-editor"><b style="min-width:90px;' + (n === 'Unassigned' ? 'color:#C2410C' : '') + '">' + relEsc(n) + '</b>' +
+    '<div class="bar"><span style="width:' + Math.round(load[n].total / max * 100) + '%"></span></div>' +
+    '<span class="mono" style="font-size:12px;color:var(--muted)">' + load[n].open + ' open / ' + load[n].total + ' total</span></div>'
+  ).join('') : '<div class="rel-empty">No upcoming production releases.</div>';
+}
+
+// Auto-refresh every 5 minutes while the Release Calendar tab is open
+setInterval(() => {
+  if(document.getElementById('releaseView').style.display === 'block' && isGateUnlocked() && !document.hidden) loadReleases(true);
+}, 300000);
+
 applyGateState();
 
 // Poll the Sheet in the background so everyone converges on the same data without needing to
